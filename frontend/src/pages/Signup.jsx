@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import API_BASE_URL from '../config/api';
 
 export default function CustomSignup() {
     const [formData, setFormData] = useState({
@@ -13,7 +14,8 @@ export default function CustomSignup() {
     const [successMessage, setSuccessMessage] = useState("");
     const [apiStatus, setApiStatus] = useState({ connected: false, testing: false });
 
-    const API_BASE_URL = "http://localhost:5000";
+    
+
 
     useEffect(() => {
         checkApiConnection();

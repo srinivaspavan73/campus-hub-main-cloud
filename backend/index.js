@@ -12,17 +12,20 @@ dotenv.config();
 
 const app = express();
 app.use(express.json());
-// app.use(cors());
+
+// ✅ FIXED: Updated CORS configuration
 app.use(cors({
     origin: [
-        'https://campus-hub-main.vercel.app/',
-        'http://localhost:5173',  // For local development
-        'http://localhost:3000'   // Alternative local port
+        'https://campus-hub-main.vercel.app', // ✅ Removed trailing slash
+        'http://localhost:5173',
+        'http://localhost:3000'
     ],
-    credentials: true
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Validation Schemas (same as before)
+// Validation Schemas
 const authSchema = z.object({
     email: z.string().min(5).max(255).email({ message: "Invalid email format" }),
     password: z.string().min(6, { message: "Password must be at least 6 characters long" })
@@ -38,7 +41,7 @@ const eventSchema = z.object({
     videoUrl: z.string().url().optional().or(z.literal(''))
 });
 
-// Email Configuration (same as before)
+// Email Configuration
 const emailConfig = {
     transporter: nodemailer.createTransport({
         service: "gmail",
@@ -75,14 +78,14 @@ const emailConfig = {
                 <p style="font-size: 16px; line-height: 1.5;">Welcome to <strong>CampusHub</strong> – your one-stop destination for campus events! 🎓🎉</p>
                 <p style="font-size: 16px; line-height: 1.5;">Explore exciting meetups, workshops, and activities happening around you. Never miss an event again! 🔥</p>
                 <div style="text-align: center; margin: 30px 0;">
-                    <a href="https://campus-hub-main.vercel.app/" style="background-color: #4a6ee0; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Visit CampusHub</a>
+                    <a href="https://campus-hub-main.vercel.app" style="background-color: #4a6ee0; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Visit CampusHub</a>
                 </div>
                 <p style="font-size: 16px; line-height: 1.5;">If you have any questions, we're here to help.</p>
                 <p style="font-size: 16px; line-height: 1.5;">Happy exploring! 🚀</p>
                 <p style="font-size: 16px; line-height: 1.5;"><strong>Team CampusHub</strong></p>
                 <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;">
                 <p style="font-size: 14px; color: #777; text-align: center;">
-                    <a href="https://campus-hub-main.vercel.app/" style="color: #4a6ee0; text-decoration: none;">CampusHub</a>
+                    <a href="https://campus-hub-main.vercel.app" style="color: #4a6ee0; text-decoration: none;">CampusHub</a>
                 </p>
             </div>
             `
@@ -108,14 +111,14 @@ const emailConfig = {
                 <p style="font-size: 16px; line-height: 1.5;">We can't wait to see you there! 🙌</p>
                 
                 <div style="text-align: center; margin: 30px 0;">
-                    <a href="https://campus-hub-main.vercel.app/" style="background-color: #4a6ee0; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">View Event Details</a>
+                    <a href="https://campus-hub-main.vercel.app" style="background-color: #4a6ee0; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">View Event Details</a>
                 </div>
                 
                 <p style="font-size: 16px; line-height: 1.5;">Cheers,<br><strong>Team CampusHub 🚀</strong></p>
                 
                 <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;">
                 <p style="font-size: 14px; color: #777; text-align: center;">
-                    <a href="https://campus-hub-main.vercel.app/" style="color: #4a6ee0; text-decoration: none;">CampusHub</a>
+                    <a href="https://campus-hub-main.vercel.app" style="color: #4a6ee0; text-decoration: none;">CampusHub</a>
                 </p>
             </div>
             `
@@ -143,14 +146,14 @@ const emailConfig = {
                 <p style="font-size: 16px; line-height: 1.5;">Be part of the experience and make unforgettable memories! 💡🎭</p>
                 
                 <div style="text-align: center; margin: 30px 0;">
-                    <a href="https://campus-hub-main.vercel.app/" style="background-color: #4a6ee0; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Register Now</a>
+                    <a href="https://campus-hub-main.vercel.app" style="background-color: #4a6ee0; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Register Now</a>
                 </div>
                 
                 <p style="font-size: 16px; line-height: 1.5;">See you there!<br><strong>Team CampusHub 🚀</strong></p>
                 
                 <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;">
                 <p style="font-size: 14px; color: #777; text-align: center;">
-                    <a href="https://campus-hub-main.vercel.app/" style="color: #4a6ee0; text-decoration: none;">CampusHub</a>
+                    <a href="https://campus-hub-main.vercel.app" style="color: #4a6ee0; text-decoration: none;">CampusHub</a>
                 </p>
             </div>
             `
@@ -189,7 +192,7 @@ const isAdmin = async (req, res, next) => {
     }
 };
 
-// Route Handlers
+// Route Handlers (keeping all your existing route handlers unchanged)
 const userRoutes = {
     async signup(req, res) {
         try {
@@ -283,7 +286,6 @@ const userRoutes = {
                 return res.status(404).json({ success: false, msg: 'Event not found' });
             }
 
-            // Check if already registered
             const existingRegistration = await Registration.findOne({
                 userId: req.user.id,
                 eventId: event._id
@@ -293,14 +295,12 @@ const userRoutes = {
                 return res.status(400).json({ success: false, msg: 'Already registered' });
             }
 
-            // Create registration
             const registration = new Registration({
                 userId: req.user.id,
                 eventId: event._id
             });
             await registration.save();
 
-            // Add user to event's attendees array
             event.attendees.push(req.user.id);
             await event.save();
 
@@ -407,7 +407,7 @@ const adminRoutes = {
             const newEvent = new Event({
                 ...eventData,
                 organizerId: req.user.id,
-                attendees: [] // Initialize empty attendees array
+                attendees: []
             });
 
             await newEvent.save();
@@ -465,10 +465,8 @@ const adminRoutes = {
 
     async deleteEvent(req, res) {
         try {
-            // Delete all registrations for this event
             await Registration.deleteMany({ eventId: req.params.eventId });
             
-            // Delete the event
             const deletedEvent = await Event.findByIdAndDelete(req.params.eventId);
             
             if (!deletedEvent) {
@@ -487,7 +485,6 @@ const adminRoutes = {
             const registrations = await Registration.find({ eventId: req.params.eventId })
                 .populate('userId', 'username email');
 
-            // Format the response to match your frontend expectations
             const formattedRegistrations = registrations.map(reg => ({
                 id: reg._id,
                 userId: reg.userId._id,
@@ -508,7 +505,7 @@ const adminRoutes = {
 };
 
 // Routes
-app.get('/', (req, res) => res.send("Hello from backend"));
+app.get('/', (req, res) => res.send("Hello from CampusHub Backend"));
 
 // Admin routes
 app.post('/admin/signup', adminRoutes.signup);
@@ -519,7 +516,6 @@ app.get('/admin/events', authenticateToken, isAdmin, async (req, res) => {
         const events = await Event.find()
             .populate('attendees', 'id username email');
 
-        // Format response to match frontend expectations
         const formattedEvents = events.map(event => ({
             id: event._id,
             title: event.title,
@@ -559,7 +555,6 @@ app.get('/user/events', async (req, res) => {
         const events = await Event.find()
             .populate('attendees', 'id username email');
 
-        // Format response to match frontend expectations
         const formattedEvents = events.map(event => ({
             id: event._id,
             title: event.title,
@@ -617,6 +612,9 @@ app.get('/users', async (req, res) => {
 // Error handling
 app.use(errorHandler);
 
-app.listen(5000, () => {
-    console.log("Listening on port 5000....");
+// ✅ FIXED: Use Render's dynamic PORT
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+    console.log(`✅ Server running on port ${PORT}`);
+    console.log(`📡 Backend URL: https://campus-hub-main-cloud.onrender.com`);
 });

@@ -4,7 +4,7 @@ import { useSetRecoilState } from 'recoil';
 import { userState } from '../state/userAtom';
 import axios from 'axios';
 import { Eye, EyeOff } from 'lucide-react'; // Import icons for password visibility toggle
-
+import API_BASE_URL from '../config/api';
 export default function SignIn() {
 
     useEffect(() => {
@@ -68,7 +68,7 @@ export default function SignIn() {
             // Use normalized (trimmed and lowercase) email for the API request
             const normalizedEmail = validation.normalizedEmail;
 
-            const response = await axios.post('http://localhost:5000/user/signin', {
+            const response = await axios.post(`${API_BASE_URL}/user/signin`, {
                 email: normalizedEmail,
                 password
             });

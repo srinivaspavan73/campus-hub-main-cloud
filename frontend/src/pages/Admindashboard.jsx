@@ -6,7 +6,7 @@ import { adminState } from "../state/adminAtom";
 import { Menu, LogOut, ChevronLeft, AlertTriangle, CheckCircle, XCircle, X } from 'lucide-react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-
+import API_BASE_URL from '../config/api';
 
 export default function AdminDashboard() {
     const [admin, setAdmin] = useRecoilState(adminState);
@@ -53,7 +53,7 @@ export default function AdminDashboard() {
     // API Functions
     const fetchProfile = async () => {
         try {
-            const response = await axios.get('https://campushub-api.vercel.app/admin/profile');
+            const response = await axios.get(`${API_BASE_URL}/admin/profile`);
             if (response.data.success) {
                 setAdmin(prevState => ({ ...prevState, ...response.data.admin }));
             }
@@ -66,7 +66,7 @@ export default function AdminDashboard() {
     const fetchEvents = async () => {
         setLoading(true);
         try {
-            const response = await axios.get('https://campushub-api.vercel.app/admin/events');
+            const response = await axios.get(`${API_BASE_URL}/admin/events`);
             if (response.data.success) {
                 setEvents(response.data.events);
             }
@@ -81,7 +81,7 @@ export default function AdminDashboard() {
     const fetchEventRegistrations = async (eventId) => {
         setLoading(true);
         try {
-            const response = await axios.get(`https://campushub-api.vercel.app/admin/event/${eventId}/registrations`);
+            const response = await axios.get(`${API_BASE_URL}/admin/event/${eventId}/registrations`);
             if (response.data.success) {
                 setRegistrations(response.data.registrations);
                 setSelectedEvent(events.find(event => event._id === eventId));
@@ -99,7 +99,7 @@ export default function AdminDashboard() {
         e.preventDefault();
         setLoading(true);
         try {
-            const response = await axios.post('https://campushub-api.vercel.app/admin/create-event', eventForm);
+            const response = await axios.post(`${API_BASE_URL}/admin/create-event`, eventForm);
             if (response.data.success) {
                 setEvents([...events, response.data.event]);
                 setIsCreatingEvent(false);
@@ -118,7 +118,7 @@ export default function AdminDashboard() {
         e.preventDefault();
         setLoading(true);
         try {
-            const response = await axios.put(`https://campushub-api.vercel.app/admin/edit-event/${selectedEvent._id}`, eventForm);
+            const response = await axios.put(`${API_BASE_URL}/admin/edit-event/${selectedEvent._id}`, eventForm);
             if (response.data.success) {
                 setEvents(events.map(event => event._id === selectedEvent._id ? response.data.event : event));
                 setIsEditingEvent(false);
@@ -138,7 +138,7 @@ export default function AdminDashboard() {
 
         setLoading(true);
         try {
-            const response = await axios.delete(`https://campushub-api.vercel.app/admin/delete-event/${eventId}`);
+            const response = await axios.delete(`${API_BASE_URL}/admin/delete-event/${eventId}`);
             if (response.data.success) {
                 setEvents(events.filter(event => event._id !== eventId));
                 showToast('Event deleted successfully', 'success');

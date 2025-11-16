@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import { useSetRecoilState } from "recoil";
 import { adminState } from "../state/adminAtom";
-
+import API_BASE_URL from '../config/api';
 export default function AdminSignin() {
     const navigate = useNavigate();
     const [formData, setFormData] = useState({
@@ -70,7 +70,7 @@ export default function AdminSignin() {
             // Trim and lowercase email before sending
             const email = formData.email.trim().toLowerCase();
 
-            const response = await axios.post("https://campushub-api.vercel.app/admin/signin", {
+           const response = await axios.post(`${API_BASE_URL}/admin/signin`, {
                 email,
                 password: formData.password
             });

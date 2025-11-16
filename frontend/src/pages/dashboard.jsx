@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useRecoilValue } from "recoil";
 import { userState } from "../state/userAtom";
 import axios from "axios";
+import API_BASE_URL from '../config/api';
 
 export default function Dashboard() {
     const navigate = useNavigate();
@@ -32,10 +33,10 @@ export default function Dashboard() {
         const fetchData = async () => {
             try {
                 setLoading(true);
-                const [profileRes, eventsRes] = await Promise.all([
-                    axios.get('http://localhost:5000/user/profile'),
-                    axios.get('http://localhost:5000/user/events')
-                ]);
+const [profileRes, eventsRes] = await Promise.all([
+    axios.get(`${API_BASE_URL}/user/profile`),
+    axios.get(`${API_BASE_URL}/user/events`)
+]);
 
                 setUserProfile(profileRes.data.user);
                 // Handle the events array from the response
@@ -70,7 +71,7 @@ export default function Dashboard() {
     const handleRegisterForEvent = async (eventId) => {
         try {
             setRegistering(true);
-            const response = await axios.post(`http://localhost:5000/user/register-event/${eventId}`);
+            const response = await axios.post(`${API_BASE_URL}/user/register-event/${eventId}`);
 
             // Update the event in the UI to show registered status
             setEvents(prevEvents =>
