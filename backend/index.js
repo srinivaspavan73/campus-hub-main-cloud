@@ -16,7 +16,7 @@ app.use(express.json());
 // ✅ FIXED: Updated CORS configuration
 app.use(cors({
     origin: [
-        'https://campus-hub-main.vercel.app', // ✅ Removed trailing slash
+        'https://campus-hub-main-cloud.vercel.app/', // ✅ Removed trailing slash
         'http://localhost:5173',
         'http://localhost:3000'
     ],
@@ -78,14 +78,14 @@ const emailConfig = {
                 <p style="font-size: 16px; line-height: 1.5;">Welcome to <strong>CampusHub</strong> – your one-stop destination for campus events! 🎓🎉</p>
                 <p style="font-size: 16px; line-height: 1.5;">Explore exciting meetups, workshops, and activities happening around you. Never miss an event again! 🔥</p>
                 <div style="text-align: center; margin: 30px 0;">
-                    <a href="https://campus-hub-main.vercel.app" style="background-color: #4a6ee0; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Visit CampusHub</a>
+                    <a href="https://campus-hub-main-cloud.vercel.app/" style="background-color: #4a6ee0; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Visit CampusHub</a>
                 </div>
                 <p style="font-size: 16px; line-height: 1.5;">If you have any questions, we're here to help.</p>
                 <p style="font-size: 16px; line-height: 1.5;">Happy exploring! 🚀</p>
                 <p style="font-size: 16px; line-height: 1.5;"><strong>Team CampusHub</strong></p>
                 <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;">
                 <p style="font-size: 14px; color: #777; text-align: center;">
-                    <a href="https://campus-hub-main.vercel.app" style="color: #4a6ee0; text-decoration: none;">CampusHub</a>
+                    <a href="https://campus-hub-main-cloud.vercel.app/" style="color: #4a6ee0; text-decoration: none;">CampusHub</a>
                 </p>
             </div>
             `
@@ -111,14 +111,14 @@ const emailConfig = {
                 <p style="font-size: 16px; line-height: 1.5;">We can't wait to see you there! 🙌</p>
                 
                 <div style="text-align: center; margin: 30px 0;">
-                    <a href="https://campus-hub-main.vercel.app" style="background-color: #4a6ee0; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">View Event Details</a>
+                    <a href="https://campus-hub-main-cloud.vercel.app/" style="background-color: #4a6ee0; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">View Event Details</a>
                 </div>
                 
                 <p style="font-size: 16px; line-height: 1.5;">Cheers,<br><strong>Team CampusHub 🚀</strong></p>
                 
                 <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;">
                 <p style="font-size: 14px; color: #777; text-align: center;">
-                    <a href="https://campus-hub-main.vercel.app" style="color: #4a6ee0; text-decoration: none;">CampusHub</a>
+                    <a href="https://campus-hub-main-cloud.vercel.app/" style="color: #4a6ee0; text-decoration: none;">CampusHub</a>
                 </p>
             </div>
             `
@@ -146,14 +146,14 @@ const emailConfig = {
                 <p style="font-size: 16px; line-height: 1.5;">Be part of the experience and make unforgettable memories! 💡🎭</p>
                 
                 <div style="text-align: center; margin: 30px 0;">
-                    <a href="https://campus-hub-main.vercel.app" style="background-color: #4a6ee0; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Register Now</a>
+                    <a href="https://campus-hub-main-cloud.vercel.app/" style="background-color: #4a6ee0; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Register Now</a>
                 </div>
                 
                 <p style="font-size: 16px; line-height: 1.5;">See you there!<br><strong>Team CampusHub 🚀</strong></p>
                 
                 <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;">
                 <p style="font-size: 14px; color: #777; text-align: center;">
-                    <a href="https://campus-hub-main.vercel.app" style="color: #4a6ee0; text-decoration: none;">CampusHub</a>
+                    <a href="https://campus-hub-main-cloud.vercel.app/" style="color: #4a6ee0; text-decoration: none;">CampusHub</a>
                 </p>
             </div>
             `
