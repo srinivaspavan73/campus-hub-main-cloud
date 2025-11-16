@@ -1,0 +1,20 @@
+{
+  "name": "campus-hub-main",
+  "version": "1.0.0",
+  "description": "```mermaid\r graph TB\r     A[Repository] --> B[Modules: 1]\r     A --> C[Sections: 2]\r     B --> D[Core Components]\r     B --> E[UI Components]\r     B --> F[Utilities]\r     C --> G[API Documentation]\r     C --> H[Implementation Guides]\r     C --> I[Code Examples]",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/srinivaspavan73/campus-hub-main.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/srinivaspavan73/campus-hub-main/issues"
+  },
+  "homepage": "https://github.com/srinivaspavan73/campus-hub-main#readme"
+}

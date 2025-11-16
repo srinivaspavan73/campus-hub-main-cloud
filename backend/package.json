@@ -1,0 +1,33 @@
+{
+  "name": "campushub-backend",
+  "version": "1.0.0",
+  "description": "Campus event management system backend",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "mysql2": "^3.6.5",
+    "nodemailer": "^6.9.7",
+    "sequelize": "^6.35.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "keywords": [
+    "campus",
+    "events",
+    "management",
+    "mysql",
+    "sequelize"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
+}
