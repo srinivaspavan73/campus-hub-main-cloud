@@ -1,253 +1,166 @@
-const { Sequelize, DataTypes } = require('sequelize');
+const mongoose = require('mongoose');
 require('dotenv').config();
 
-
-// Database Connection
-const sequelize = new Sequelize(
-    process.env.DB_NAME || 'CampusHub',
-    process.env.DB_USER || 'root',
-    process.env.DB_PASSWORD || '',
-    {
-        host: process.env.DB_HOST || 'localhost',
-        dialect: 'mysql',
-        port: process.env.DB_PORT || 3306,
-        logging: false, // Set to console.log to see SQL queries
-        pool: {
-            max: 5,
-            min: 0,
-            acquire: 30000,
-            idle: 10000
-        }
-    }
-);
-
-// Test database connection
+// MongoDB Connection
 const connectDB = async () => {
     try {
-        await sequelize.authenticate();
-        console.log('MySQL database connected successfully');
+        const conn = await mongoose.connect(process.env.MONGODB_URI, {
+            useNewUrlParser: true,
+            useUnifiedTopology: true,
+        });
         
-        // Sync all models (create tables if they don't exist)
-        await sequelize.sync({ alter: true }); // Use { force: true } to drop and recreate tables
-        console.log('Database synced successfully');
+        console.log(`MongoDB connected successfully: ${conn.connection.host}`);
+        console.log(`Database: ${conn.connection.name}`);
     } catch (error) {
-        console.error('Unable to connect to database:', error);
+        console.error('MongoDB connection error:', error.message);
         process.exit(1);
     }
 };
 
-// User Model
-const User = sequelize.define('User', {
-    id: {
-        type: DataTypes.INTEGER,
-        primaryKey: true,
-        autoIncrement: true
-    },
+// User Schema
+const userSchema = new mongoose.Schema({
     username: {
-        type: DataTypes.STRING(100),
-        allowNull: false
+        type: String,
+        required: true,
+        trim: true
     },
     email: {
-        type: DataTypes.STRING(255),
-        allowNull: false,
+        type: String,
+        required: true,
         unique: true,
-        validate: {
-            isEmail: true
-        }
+        lowercase: true,
+        trim: true,
+        match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email']
     },
     password: {
-        type: DataTypes.STRING(255),
-        allowNull: false
+        type: String,
+        required: true
     },
     role: {
-        type: DataTypes.ENUM('student', 'organizer'),
-        defaultValue: 'student'
+        type: String,
+        enum: ['student', 'organizer'],
+        default: 'student'
     }
 }, {
-    tableName: 'users',
-    timestamps: true, // This adds createdAt and updatedAt
-    underscored: true // This converts camelCase to snake_case in database
+    timestamps: true // Automatically adds createdAt and updatedAt
 });
 
-// Admin Model
-const Admin = sequelize.define('Admin', {
-    id: {
-        type: DataTypes.INTEGER,
-        primaryKey: true,
-        autoIncrement: true
-    },
+// Admin Schema
+const adminSchema = new mongoose.Schema({
     username: {
-        type: DataTypes.STRING(100),
-        allowNull: false
+        type: String,
+        required: true,
+        trim: true
     },
     adminName: {
-        type: DataTypes.STRING(100),
-        allowNull: true
+        type: String,
+        trim: true
     },
     email: {
-        type: DataTypes.STRING(255),
-        allowNull: false,
+        type: String,
+        required: true,
         unique: true,
-        validate: {
-            isEmail: true
-        }
+        lowercase: true,
+        trim: true,
+        match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email']
     },
     password: {
-        type: DataTypes.STRING(255),
-        allowNull: false
+        type: String,
+        required: true
     },
     role: {
-        type: DataTypes.ENUM('admin'),
-        defaultValue: 'admin'
+        type: String,
+        enum: ['admin'],
+        default: 'admin'
     }
 }, {
-    tableName: 'admins',
-    timestamps: true,
-    underscored: true
+    timestamps: true
 });
 
-// Event Model
-const Event = sequelize.define('Event', {
-    id: {
-        type: DataTypes.INTEGER,
-        primaryKey: true,
-        autoIncrement: true
-    },
+// Event Schema
+const eventSchema = new mongoose.Schema({
     title: {
-        type: DataTypes.STRING(255),
-        allowNull: false
+        type: String,
+        required: true,
+        trim: true
     },
     description: {
-        type: DataTypes.TEXT,
-        allowNull: true
+        type: String,
+        trim: true
     },
     date: {
-        type: DataTypes.DATEONLY, // Only date, no time
-        allowNull: false
+        type: Date,
+        required: true
     },
     time: {
-        type: DataTypes.STRING(20),
-        allowNull: false
+        type: String,
+        required: true
     },
     location: {
-        type: DataTypes.STRING(255),
-        allowNull: false
+        type: String,
+        required: true,
+        trim: true
     },
     imageUrl: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-        validate: {
-            isUrl: true
-        }
+        type: String,
+        trim: true,
+        match: [/^https?:\/\/.+/, 'Please provide a valid URL']
     },
     videoUrl: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-        validate: {
-            isUrl: true
-        }
+        type: String,
+        trim: true,
+        match: [/^https?:\/\/.+/, 'Please provide a valid URL']
     },
     organizerId: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        field: 'organizer_id' // This maps to the actual column name in database
-    }
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Admin',
+        required: true
+    },
+    // Store attendee IDs directly in the event for easy access
+    attendees: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }]
 }, {
-    tableName: 'events',
-    timestamps: true,
-    underscored: true
+    timestamps: true
 });
 
-// Registration Model (Junction table for User-Event relationship)
-const Registration = sequelize.define('Registration', {
-    id: {
-        type: DataTypes.INTEGER,
-        primaryKey: true,
-        autoIncrement: true
-    },
+// Registration Schema (for tracking registration details)
+const registrationSchema = new mongoose.Schema({
     userId: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        field: 'user_id'
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
     },
     eventId: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        field: 'event_id'
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Event',
+        required: true
     },
     registeredAt: {
-        type: DataTypes.DATE,
-        defaultValue: DataTypes.NOW,
-        field: 'registered_at'
+        type: Date,
+        default: Date.now
     }
 }, {
-    tableName: 'registrations',
-    timestamps: true,
-    underscored: true,
-    indexes: [
-        {
-            unique: true,
-            fields: ['user_id', 'event_id'] // Prevent duplicate registrations
-        }
-    ]
+    timestamps: true
 });
 
-// Define Associations
-// Event belongs to Admin (organizer)
-Event.belongsTo(Admin, {
-    foreignKey: 'organizerId',
-    as: 'organizer'
-});
+// Prevent duplicate registrations
+registrationSchema.index({ userId: 1, eventId: 1 }, { unique: true });
 
-Admin.hasMany(Event, {
-    foreignKey: 'organizerId',
-    as: 'events'
-});
-
-// User-Event Many-to-Many through Registration
-User.belongsToMany(Event, {
-    through: Registration,
-    foreignKey: 'userId',
-    otherKey: 'eventId',
-    as: 'registeredEvents'
-});
-
-Event.belongsToMany(User, {
-    through: Registration,
-    foreignKey: 'eventId',
-    otherKey: 'userId',
-    as: 'attendees'
-});
-
-// Direct associations for Registration table
-Registration.belongsTo(User, {
-    foreignKey: 'userId',
-    as: 'user'
-});
-
-Registration.belongsTo(Event, {
-    foreignKey: 'eventId',
-    as: 'event'
-});
-
-User.hasMany(Registration, {
-    foreignKey: 'userId',
-    as: 'registrations'
-});
-
-Event.hasMany(Registration, {
-    foreignKey: 'eventId',
-    as: 'registrations'
-});
+// Create Models
+const User = mongoose.model('User', userSchema);
+const Admin = mongoose.model('Admin', adminSchema);
+const Event = mongoose.model('Event', eventSchema);
+const Registration = mongoose.model('Registration', registrationSchema);
 
 // Initialize database connection
 connectDB();
 
 module.exports = {
-    sequelize,
+    connectDB,
     User,
-    Event,
-    Registration,
     Admin,
-    connectDB
+    Event,
+    Registration
 };

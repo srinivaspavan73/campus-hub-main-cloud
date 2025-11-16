@@ -118,7 +118,7 @@ export default function Dashboard() {
 
     // Helper function to check if an event is registered
     const isEventRegistered = (event) => {
-        if (!userProfile || !userProfile.id) return false;
+        if (!userProfile || !userProfile._id) return false;
 
         return Array.isArray(event.attendees) &&
             event.attendees.some(attendee => attendee.id === userProfile.id);

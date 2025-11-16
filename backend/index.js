@@ -14,7 +14,7 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// Validation Schemas
+// Validation Schemas (same as before)
 const authSchema = z.object({
     email: z.string().min(5).max(255).email({ message: "Invalid email format" }),
     password: z.string().min(6, { message: "Password must be at least 6 characters long" })
@@ -26,11 +26,11 @@ const eventSchema = z.object({
     date: z.string().min(1, { message: "Date is required" }),
     time: z.string().min(1, { message: "Time is required" }),
     location: z.string().min(1, { message: "Location is required" }),
-    imageUrl: z.string().url().optional(),
-    videoUrl: z.string().url().optional()
+    imageUrl: z.string().url().optional().or(z.literal('')),
+    videoUrl: z.string().url().optional().or(z.literal(''))
 });
 
-// Email Configuration
+// Email Configuration (same as before)
 const emailConfig = {
     transporter: nodemailer.createTransport({
         service: "gmail",
@@ -67,14 +67,14 @@ const emailConfig = {
                 <p style="font-size: 16px; line-height: 1.5;">Welcome to <strong>CampusHub</strong> – your one-stop destination for campus events! 🎓🎉</p>
                 <p style="font-size: 16px; line-height: 1.5;">Explore exciting meetups, workshops, and activities happening around you. Never miss an event again! 🔥</p>
                 <div style="text-align: center; margin: 30px 0;">
-                    <a href="https://srees-campushub.vercel.app/" style="background-color: #4a6ee0; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Visit CampusHub</a>
+                    <a href="https://campus-hub-main.vercel.app/" style="background-color: #4a6ee0; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Visit CampusHub</a>
                 </div>
                 <p style="font-size: 16px; line-height: 1.5;">If you have any questions, we're here to help.</p>
                 <p style="font-size: 16px; line-height: 1.5;">Happy exploring! 🚀</p>
                 <p style="font-size: 16px; line-height: 1.5;"><strong>Team CampusHub</strong></p>
                 <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;">
                 <p style="font-size: 14px; color: #777; text-align: center;">
-                    <a href="https://srees-campushub.vercel.app/" style="color: #4a6ee0; text-decoration: none;">CampusHub</a>
+                    <a href="https://campus-hub-main.vercel.app/" style="color: #4a6ee0; text-decoration: none;">CampusHub</a>
                 </p>
             </div>
             `
@@ -92,7 +92,7 @@ const emailConfig = {
                 <p style="font-size: 16px; line-height: 1.5;">Awesome! You've successfully registered for <strong>${event.title}</strong>! 🎉</p>
                 
                 <div style="background-color: #f8f9fa; border-radius: 6px; padding: 16px; margin: 20px 0;">
-                    <p style="margin: 8px 0;"><strong>📅 Date:</strong> ${event.date}</p>
+                    <p style="margin: 8px 0;"><strong>📅 Date:</strong> ${new Date(event.date).toLocaleDateString()}</p>
                     <p style="margin: 8px 0;"><strong>⏰ Time:</strong> ${event.time}</p>
                     <p style="margin: 8px 0;"><strong>📍 Location:</strong> ${event.location}</p>
                 </div>
@@ -100,21 +100,21 @@ const emailConfig = {
                 <p style="font-size: 16px; line-height: 1.5;">We can't wait to see you there! 🙌</p>
                 
                 <div style="text-align: center; margin: 30px 0;">
-                    <a href="https://srees-campushub.vercel.app/" style="background-color: #4a6ee0; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">View Event Details</a>
+                    <a href="https://campus-hub-main.vercel.app/" style="background-color: #4a6ee0; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">View Event Details</a>
                 </div>
                 
                 <p style="font-size: 16px; line-height: 1.5;">Cheers,<br><strong>Team CampusHub 🚀</strong></p>
                 
                 <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;">
                 <p style="font-size: 14px; color: #777; text-align: center;">
-                    <a href="https://srees-campushub.vercel.app/" style="color: #4a6ee0; text-decoration: none;">CampusHub</a>
+                    <a href="https://campus-hub-main.vercel.app/" style="color: #4a6ee0; text-decoration: none;">CampusHub</a>
                 </p>
             </div>
             `
         );
     },
     async sendEventNotification(event) {
-        const users = await User.findAll({ attributes: ['email'] });
+        const users = await User.find({}, 'email');
         if (!users.length) return;
 
         return this.sendEmail(
@@ -127,7 +127,7 @@ const emailConfig = {
                 <p style="font-size: 16px; line-height: 1.5;">A brand-new event <strong>"${event.title}"</strong> is happening soon! Don't miss out! 🔥</p>
                 
                 <div style="background-color: #f8f9fa; border-radius: 6px; padding: 16px; margin: 20px 0;">
-                    <p style="margin: 8px 0;"><strong>📅 Date:</strong> ${event.date}</p>
+                    <p style="margin: 8px 0;"><strong>📅 Date:</strong> ${new Date(event.date).toLocaleDateString()}</p>
                     <p style="margin: 8px 0;"><strong>⏰ Time:</strong> ${event.time}</p>
                     <p style="margin: 8px 0;"><strong>📍 Location:</strong> ${event.location}</p>
                 </div>
@@ -135,14 +135,14 @@ const emailConfig = {
                 <p style="font-size: 16px; line-height: 1.5;">Be part of the experience and make unforgettable memories! 💡🎭</p>
                 
                 <div style="text-align: center; margin: 30px 0;">
-                    <a href="https://srees-campushub.vercel.app/" style="background-color: #4a6ee0; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Register Now</a>
+                    <a href="https://campus-hub-main.vercel.app/" style="background-color: #4a6ee0; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Register Now</a>
                 </div>
                 
                 <p style="font-size: 16px; line-height: 1.5;">See you there!<br><strong>Team CampusHub 🚀</strong></p>
                 
                 <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;">
                 <p style="font-size: 14px; color: #777; text-align: center;">
-                    <a href="https://srees-campushub.vercel.app/" style="color: #4a6ee0; text-decoration: none;">CampusHub</a>
+                    <a href="https://campus-hub-main.vercel.app/" style="color: #4a6ee0; text-decoration: none;">CampusHub</a>
                 </p>
             </div>
             `
@@ -171,7 +171,7 @@ const authenticateToken = (req, res, next) => {
 
 const isAdmin = async (req, res, next) => {
     try {
-        const admin = await Admin.findByPk(req.user.id);
+        const admin = await Admin.findById(req.user.id);
         if (!admin || admin.role !== 'admin') {
             return res.status(403).json({ success: false, msg: "Access denied" });
         }
@@ -187,7 +187,7 @@ const userRoutes = {
         try {
             const { email, password } = authSchema.parse(req.body);
 
-            const existingUser = await User.findOne({ where: { email } });
+            const existingUser = await User.findOne({ email });
             if (existingUser) {
                 return res.status(400).json({ success: false, msg: 'User already exists' });
             }
@@ -195,14 +195,16 @@ const userRoutes = {
             const hashedPassword = await bcrypt.hash(password, 10);
             const username = email.split("@")[0];
 
-            const newUser = await User.create({
+            const newUser = new User({
                 username,
                 email,
                 password: hashedPassword
             });
 
+            await newUser.save();
+
             const token = jwt.sign(
-                { id: newUser.id, email },
+                { id: newUser._id, email },
                 process.env.JWT_SECRET,
             );
 
@@ -212,7 +214,7 @@ const userRoutes = {
                 success: true,
                 msg: 'User signed up successfully',
                 token,
-                user: { id: newUser.id, username, email }
+                user: { id: newUser._id, username, email }
             });
         } catch (error) {
             if (error instanceof z.ZodError) {
@@ -230,13 +232,13 @@ const userRoutes = {
         try {
             const { email, password } = authSchema.parse(req.body);
 
-            const user = await User.findOne({ where: { email } });
+            const user = await User.findOne({ email });
             if (!user || !(await bcrypt.compare(password, user.password))) {
                 return res.status(400).json({ success: false, msg: 'Invalid credentials' });
             }
 
             const token = jwt.sign(
-                { id: user.id, email },
+                { id: user._id, email },
                 process.env.JWT_SECRET,
             );
 
@@ -244,7 +246,7 @@ const userRoutes = {
                 success: true,
                 msg: 'User logged in successfully',
                 token,
-                user: { id: user.id, username: user.username, email }
+                user: { id: user._id, username: user.username, email }
             });
         } catch (error) {
             if (error instanceof z.ZodError) {
@@ -259,9 +261,7 @@ const userRoutes = {
     },
 
     async getProfile(req, res) {
-        const user = await User.findByPk(req.user.id, {
-            attributes: { exclude: ['password'] }
-        });
+        const user = await User.findById(req.user.id).select('-password');
         if (!user) {
             return res.status(404).json({ success: false, msg: "User not found" });
         }
@@ -270,28 +270,33 @@ const userRoutes = {
 
     async registerForEvent(req, res) {
         try {
-            const event = await Event.findByPk(req.params.id);
+            const event = await Event.findById(req.params.id);
             if (!event) {
                 return res.status(404).json({ success: false, msg: 'Event not found' });
             }
 
+            // Check if already registered
             const existingRegistration = await Registration.findOne({
-                where: {
-                    userId: req.user.id,
-                    eventId: event.id
-                }
+                userId: req.user.id,
+                eventId: event._id
             });
 
             if (existingRegistration) {
                 return res.status(400).json({ success: false, msg: 'Already registered' });
             }
 
-            await Registration.create({ 
-                userId: req.user.id, 
-                eventId: event.id 
+            // Create registration
+            const registration = new Registration({
+                userId: req.user.id,
+                eventId: event._id
             });
+            await registration.save();
 
-            const user = await User.findByPk(req.user.id);
+            // Add user to event's attendees array
+            event.attendees.push(req.user.id);
+            await event.save();
+
+            const user = await User.findById(req.user.id);
             await emailConfig.sendEventRegistrationEmail(event, user);
 
             res.json({ success: true, msg: 'Registered successfully!' });
@@ -307,7 +312,7 @@ const adminRoutes = {
         try {
             const { email, password } = authSchema.parse(req.body);
 
-            const existingAdmin = await Admin.findOne({ where: { email } });
+            const existingAdmin = await Admin.findOne({ email });
             if (existingAdmin) {
                 return res.status(400).json({ success: false, msg: 'Admin already exists' });
             }
@@ -315,15 +320,17 @@ const adminRoutes = {
             const hashedPassword = await bcrypt.hash(password, 10);
             const username = email.split("@")[0];
 
-            const newAdmin = await Admin.create({
+            const newAdmin = new Admin({
                 username,
                 adminName: username,
                 email,
                 password: hashedPassword
             });
 
+            await newAdmin.save();
+
             const token = jwt.sign(
-                { id: newAdmin.id, email },
+                { id: newAdmin._id, email },
                 process.env.JWT_SECRET,
             );
 
@@ -331,7 +338,7 @@ const adminRoutes = {
                 success: true,
                 msg: 'Admin signed up successfully',
                 token,
-                admin: { id: newAdmin.id, adminName: username, email }
+                admin: { id: newAdmin._id, adminName: username, email }
             });
         } catch (error) {
             if (error instanceof z.ZodError) {
@@ -349,13 +356,13 @@ const adminRoutes = {
         try {
             const { email, password } = authSchema.parse(req.body);
 
-            const admin = await Admin.findOne({ where: { email } });
+            const admin = await Admin.findOne({ email });
             if (!admin || !(await bcrypt.compare(password, admin.password))) {
                 return res.status(400).json({ success: false, msg: 'Invalid credentials' });
             }
 
             const token = jwt.sign(
-                { id: admin.id, email },
+                { id: admin._id, email },
                 process.env.JWT_SECRET,
             );
 
@@ -363,7 +370,7 @@ const adminRoutes = {
                 success: true,
                 msg: 'Admin logged in successfully',
                 token,
-                admin: { id: admin.id, adminName: admin.adminName, email }
+                admin: { id: admin._id, adminName: admin.adminName, email }
             });
         } catch (error) {
             if (error instanceof z.ZodError) {
@@ -378,9 +385,7 @@ const adminRoutes = {
     },
 
     async getProfile(req, res) {
-        const admin = await Admin.findByPk(req.user.id, {
-            attributes: { exclude: ['password'] }
-        });
+        const admin = await Admin.findById(req.user.id).select('-password');
         if (!admin) {
             return res.status(404).json({ success: false, msg: "Admin not found" });
         }
@@ -391,11 +396,13 @@ const adminRoutes = {
         try {
             const eventData = eventSchema.parse(req.body);
 
-            const newEvent = await Event.create({
+            const newEvent = new Event({
                 ...eventData,
-                organizerId: req.user.id
+                organizerId: req.user.id,
+                attendees: [] // Initialize empty attendees array
             });
 
+            await newEvent.save();
             await emailConfig.sendEventNotification(newEvent);
 
             res.status(201).json({
@@ -419,16 +426,16 @@ const adminRoutes = {
         try {
             const eventData = eventSchema.parse(req.body);
 
-            const [updatedRowsCount] = await Event.update(eventData, {
-                where: { id: req.params.id },
-                returning: true
-            });
+            const updatedEvent = await Event.findByIdAndUpdate(
+                req.params.id,
+                eventData,
+                { new: true, runValidators: true }
+            );
 
-            if (updatedRowsCount === 0) {
+            if (!updatedEvent) {
                 return res.status(404).json({ success: false, msg: "Event not found" });
             }
 
-            const updatedEvent = await Event.findByPk(req.params.id);
             await emailConfig.sendEventNotification(updatedEvent);
 
             res.json({
@@ -450,8 +457,16 @@ const adminRoutes = {
 
     async deleteEvent(req, res) {
         try {
-            await Registration.destroy({ where: { eventId: req.params.eventId } });
-            await Event.destroy({ where: { id: req.params.eventId } });
+            // Delete all registrations for this event
+            await Registration.deleteMany({ eventId: req.params.eventId });
+            
+            // Delete the event
+            const deletedEvent = await Event.findByIdAndDelete(req.params.eventId);
+            
+            if (!deletedEvent) {
+                return res.status(404).json({ success: false, msg: 'Event not found' });
+            }
+
             res.json({ success: true, msg: 'Event deleted successfully' });
         } catch (error) {
             console.error('Delete event error:', error);
@@ -461,17 +476,22 @@ const adminRoutes = {
 
     async getEventRegistrations(req, res) {
         try {
-            const registrations = await Registration.findAll({
-                where: { eventId: req.params.eventId },
-                include: [
-                    {
-                        model: User,
-                        as: 'user',
-                        attributes: ['username', 'email']
-                    }
-                ]
-            });
-            res.json({ success: true, registrations });
+            const registrations = await Registration.find({ eventId: req.params.eventId })
+                .populate('userId', 'username email');
+
+            // Format the response to match your frontend expectations
+            const formattedRegistrations = registrations.map(reg => ({
+                id: reg._id,
+                userId: reg.userId._id,
+                eventId: reg.eventId,
+                registeredAt: reg.registeredAt,
+                user: {
+                    username: reg.userId.username,
+                    email: reg.userId.email
+                }
+            }));
+
+            res.json({ success: true, registrations: formattedRegistrations });
         } catch (error) {
             console.error('Get registrations error:', error);
             res.status(500).json({ success: false, msg: 'Server error' });
@@ -488,17 +508,30 @@ app.post('/admin/signin', adminRoutes.signin);
 app.get('/admin/profile', authenticateToken, adminRoutes.getProfile);
 app.get('/admin/events', authenticateToken, isAdmin, async (req, res) => {
     try {
-        const events = await Event.findAll({
-            include: [
-                {
-                    model: User,
-                    as: 'attendees',
-                    through: { attributes: [] }, // Exclude junction table data
-                    attributes: ['id', 'username', 'email']
-                }
-            ]
-        });
-        res.json({ success: true, events });
+        const events = await Event.find()
+            .populate('attendees', 'id username email');
+
+        // Format response to match frontend expectations
+        const formattedEvents = events.map(event => ({
+            id: event._id,
+            title: event.title,
+            description: event.description,
+            date: event.date,
+            time: event.time,
+            location: event.location,
+            imageUrl: event.imageUrl,
+            videoUrl: event.videoUrl,
+            organizerId: event.organizerId,
+            createdAt: event.createdAt,
+            updatedAt: event.updatedAt,
+            attendees: event.attendees.map(user => ({
+                id: user._id,
+                username: user.username,
+                email: user.email
+            }))
+        }));
+
+        res.json({ success: true, events: formattedEvents });
     } catch (error) {
         console.error('Get admin events error:', error);
         res.status(500).json({ success: false, msg: 'Server error' });
@@ -515,8 +548,30 @@ app.post('/user/signin', userRoutes.signin);
 app.get('/user/profile', authenticateToken, userRoutes.getProfile);
 app.get('/user/events', async (req, res) => {
     try {
-        const events = await Event.findAll();
-        res.json({ success: true, events });
+        const events = await Event.find()
+            .populate('attendees', 'id username email');
+
+        // Format response to match frontend expectations
+        const formattedEvents = events.map(event => ({
+            id: event._id,
+            title: event.title,
+            description: event.description,
+            date: event.date,
+            time: event.time,
+            location: event.location,
+            imageUrl: event.imageUrl,
+            videoUrl: event.videoUrl,
+            organizerId: event.organizerId,
+            createdAt: event.createdAt,
+            updatedAt: event.updatedAt,
+            attendees: event.attendees.map(user => ({
+                id: user._id,
+                username: user.username,
+                email: user.email
+            }))
+        }));
+
+        res.json({ success: true, events: formattedEvents });
     } catch (error) {
         console.error('Get user events error:', error);
         res.status(500).json({ success: false, msg: 'Server error' });
@@ -524,17 +579,10 @@ app.get('/user/events', async (req, res) => {
 });
 app.post('/user/register-event/:id', authenticateToken, userRoutes.registerForEvent);
 
-// Error handling
-app.use(errorHandler);
-
-app.listen(5000, () => {
-    console.log("Listening on port 5000....");
-});
-
-// Add after your existing routes
+// Test routes
 app.get('/test-db', async (req, res) => {
     try {
-        const userCount = await User.count();
+        const userCount = await User.countDocuments();
         res.json({ 
             success: true, 
             userCount, 
@@ -547,9 +595,7 @@ app.get('/test-db', async (req, res) => {
 
 app.get('/users', async (req, res) => {
     try {
-        const users = await User.findAll({
-            attributes: ['id', 'username', 'email', 'createdAt']
-        });
+        const users = await User.find({}, 'id username email createdAt');
         res.json({ 
             success: true, 
             users, 
@@ -558,4 +604,11 @@ app.get('/users', async (req, res) => {
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
+});
+
+// Error handling
+app.use(errorHandler);
+
+app.listen(5000, () => {
+    console.log("Listening on port 5000....");
 });
