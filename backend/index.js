@@ -12,7 +12,15 @@ dotenv.config();
 
 const app = express();
 app.use(express.json());
-app.use(cors());
+// app.use(cors());
+app.use(cors({
+    origin: [
+        'https://campus-hub-main.vercel.app/',
+        'http://localhost:5173',  // For local development
+        'http://localhost:3000'   // Alternative local port
+    ],
+    credentials: true
+}));
 
 // Validation Schemas (same as before)
 const authSchema = z.object({
