@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import API_BASE_URL from '../config/api';
 
 export default function CustomSignup() {
+    const navigate = useNavigate();
     const [formData, setFormData] = useState({
         email: "",
         password: "",
@@ -13,9 +15,6 @@ export default function CustomSignup() {
     const [showPassword, setShowPassword] = useState(false);
     const [successMessage, setSuccessMessage] = useState("");
     const [apiStatus, setApiStatus] = useState({ connected: false, testing: false });
-
-    
-
 
     useEffect(() => {
         checkApiConnection();
@@ -31,6 +30,7 @@ export default function CustomSignup() {
                 setApiStatus({ connected: false, testing: false });
             }
         } catch (error) {
+            console.error('API connection check failed:', error);
             setApiStatus({ connected: false, testing: false });
         }
     };
@@ -64,7 +64,7 @@ export default function CustomSignup() {
 
         const username = trimmedEmail.split('@')[0];
         if (!username.startsWith('pavan')) {
-            return { valid: false, message: 'Email must start with letter "pavan"' };
+            return { valid: false, message: 'Email must start with "pavan"' };
         }
 
         return { valid: true, normalizedEmail: trimmedEmail };
@@ -120,6 +120,8 @@ export default function CustomSignup() {
                 return;
             }
 
+            console.log('Sending signup request to:', `${API_BASE_URL}/user/signup`);
+
             const response = await fetch(`${API_BASE_URL}/user/signup`, {
                 method: 'POST',
                 headers: {
@@ -132,10 +134,11 @@ export default function CustomSignup() {
             });
 
             const data = await response.json();
+            console.log('Signup response:', data);
 
             if (response.ok && data.success) {
-                // ✅ Don’t auto-login or save token here
-                setSuccessMessage("🎉 Account created successfully! Please sign in to continue.");
+                // ✅ Show success message
+                setSuccessMessage("🎉 Account created successfully! Redirecting to sign in...");
 
                 // Clear form
                 setFormData({
@@ -146,7 +149,7 @@ export default function CustomSignup() {
 
                 // Redirect to signin after short delay
                 setTimeout(() => {
-                    window.location.href = "/signin";
+                    navigate('/signin');
                 }, 2000);
             } else {
                 setServerError(data.msg || 'Signup failed. Please try again.');
@@ -156,7 +159,7 @@ export default function CustomSignup() {
             console.error("💥 Signup error:", error);
 
             if (error.name === 'TypeError' && error.message.includes('fetch')) {
-                setServerError("Unable to connect to the custom API server. Please ensure the backend is running on " + API_BASE_URL);
+                setServerError("Unable to connect to the server. Please ensure the backend is running on " + API_BASE_URL);
             } else {
                 setServerError("An error occurred during signup. Please try again.");
             }
@@ -182,7 +185,7 @@ export default function CustomSignup() {
                     {apiStatus.testing ? (
                         <p className="text-xs text-yellow-600">🔄 Checking API connection...</p>
                     ) : apiStatus.connected ? (
-                        <p className="text-xs text-green-600">✅ Custom API Connected - Ready for Database Storage</p>
+                        <p className="text-xs text-green-600">✅ API Connected</p>
                     ) : (
                         <p className="text-xs text-red-600">❌ API Not Connected - Please start backend server</p>
                     )}
@@ -221,6 +224,7 @@ export default function CustomSignup() {
                                 placeholder="pavan@gmail.com"
                             />
                             {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
+                            <p className="mt-1 text-xs text-gray-500">Email must start with "p" and end with "@gmail.com"</p>
                         </div>
 
                         <div>
@@ -273,11 +277,24 @@ export default function CustomSignup() {
                         <button
                             type="submit"
                             disabled={isSubmitting || !apiStatus.connected}
-                            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
                         >
                             {isSubmitting ? "Creating account..." : "🚀 Create Account"}
                         </button>
                     </form>
+
+                    <div className="mt-6">
+                        <div className="relative">
+                            <div className="absolute inset-0 flex items-center">
+                                <div className="w-full border-t border-gray-300"></div>
+                            </div>
+                            <div className="relative flex justify-center text-sm">
+                                <span className="px-2 bg-white text-gray-500">
+                                    Go back to <b onClick={() => navigate('/')} className="text-blue-500 cursor-pointer hover:underline">Home</b>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

@@ -5,7 +5,6 @@ const jwt = require('jsonwebtoken');
 const { z } = require('zod');
 const nodemailer = require('nodemailer');
 const dotenv = require('dotenv');
-// Database models
 
 const { User, Event, Registration, Admin } = require('./db/db');
 
@@ -238,7 +237,10 @@ const userRoutes = {
                 process.env.JWT_SECRET,
             );
 
-            await emailConfig.sendWelcomeEmail(newUser);
+            // Send welcome email asynchronously without blocking the response
+            emailConfig.sendWelcomeEmail(newUser).catch(err => {
+                console.error('Failed to send welcome email:', err);
+            });
 
             res.status(201).json({
                 success: true,
@@ -247,6 +249,7 @@ const userRoutes = {
                 user: { id: newUser._id, username, email }
             });
         } catch (error) {
+            console.error('Signup error:', error);
             if (error instanceof z.ZodError) {
                 return res.status(400).json({
                     success: false,
@@ -254,7 +257,7 @@ const userRoutes = {
                     errors: error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`)
                 });
             }
-            throw error;
+            res.status(500).json({ success: false, msg: 'Server error during signup' });
         }
     },
 
