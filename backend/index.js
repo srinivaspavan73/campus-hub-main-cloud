@@ -11,19 +11,37 @@ const { User, Event, Registration, Admin } = require('./db/db');
 dotenv.config();
 
 const app = express();
-app.use(express.json());
 
-// ✅ FIXED: Updated CORS configuration
+// ✅ CRITICAL: Apply CORS BEFORE any other middleware
+const allowedOrigins = [
+    'https://campus-hub-main-cloud.vercel.app', // ✅ NO trailing slash
+    'http://localhost:5173',
+    'http://localhost:3000'
+];
+
 app.use(cors({
-    origin: [
-        'https://campus-hub-main-cloud.vercel.app/', // ✅ Removed trailing slash
-        'http://localhost:5173',
-        'http://localhost:3000'
-    ],
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            console.log('Blocked by CORS:', origin);
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: ['Content-Length', 'X-Request-Id'],
+    maxAge: 86400 // 24 hours
 }));
+
+// Handle preflight requests explicitly
+app.options('*', cors());
+
+app.use(express.json());
 
 // Validation Schemas
 const authSchema = z.object({
@@ -75,7 +93,7 @@ const emailConfig = {
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
                 <h1 style="color: #4a6ee0; text-align: center;">Welcome to CampusHub! 🚀</h1>
                 <p style="font-size: 16px; line-height: 1.5;">Hey <strong>${username}</strong>! 👋</p>
-                <p style="font-size: 16px; line-height: 1.5;">Welcome to <strong>CampusHub</strong> – your one-stop destination for campus events! 🎓🎉</p>
+                <p style="font-size: 16px; line-height: 1.5;">Welcome to <strong>CampusHub</strong> — your one-stop destination for campus events! 🎓🎉</p>
                 <p style="font-size: 16px; line-height: 1.5;">Explore exciting meetups, workshops, and activities happening around you. Never miss an event again! 🔥</p>
                 <div style="text-align: center; margin: 30px 0;">
                     <a href="https://campus-hub-main-cloud.vercel.app/" style="background-color: #4a6ee0; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Visit CampusHub</a>
@@ -192,7 +210,7 @@ const isAdmin = async (req, res, next) => {
     }
 };
 
-// Route Handlers (keeping all your existing route handlers unchanged)
+// Route Handlers
 const userRoutes = {
     async signup(req, res) {
         try {
@@ -612,9 +630,10 @@ app.get('/users', async (req, res) => {
 // Error handling
 app.use(errorHandler);
 
-// ✅ FIXED: Use Render's dynamic PORT
+// Use Render's dynamic PORT
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`✅ Server running on port ${PORT}`);
     console.log(`📡 Backend URL: https://campus-hub-main-cloud.onrender.com`);
+    console.log(`🌐 Allowed origins:`, allowedOrigins);
 });
