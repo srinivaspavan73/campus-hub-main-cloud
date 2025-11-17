@@ -3,26 +3,26 @@ import { useNavigate } from 'react-router-dom';
 import { useSetRecoilState } from 'recoil';
 import { userState } from '../state/userAtom';
 import axios from 'axios';
-import { Eye, EyeOff } from 'lucide-react'; // Import icons for password visibility toggle
+import { Eye, EyeOff, Shield } from 'lucide-react';
 import API_BASE_URL from '../config/api';
+
 export default function SignIn() {
-
-    useEffect(() => {
-        // const token = localStorage.getItem('customAuthToken');
-        const token = localStorage.getItem('token');
-        if (token) {
-            navigate('/dashboard');
-        }
-    }, []);
-
+    const navigate = useNavigate();
+    const setUser = useSetRecoilState(userState);
+    
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState(null);
     const [emailError, setEmailError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [showPassword, setShowPassword] = useState(false); // New state for password visibility
-    const navigate = useNavigate();
-    const setUser = useSetRecoilState(userState);
+    const [showPassword, setShowPassword] = useState(false);
+
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            navigate('/dashboard');
+        }
+    }, [navigate]);
 
     const validateEmail = (email) => {
         const trimmedEmail = email.trim().toLowerCase();
@@ -33,8 +33,8 @@ export default function SignIn() {
         }
 
         const username = trimmedEmail.split('@')[0];
-        if (!username.startsWith('p')) {
-            return { valid: false, message: 'Email must start with letter "p"' };
+        if (!username.startsWith('pavan')) {
+            return { valid: false, message: 'Email must start with "pavan"' };
         }
 
         return { valid: true, normalizedEmail: trimmedEmail };
@@ -65,7 +65,6 @@ export default function SignIn() {
         setIsLoading(true);
 
         try {
-            // Use normalized (trimmed and lowercase) email for the API request
             const normalizedEmail = validation.normalizedEmail;
 
             const response = await axios.post(`${API_BASE_URL}/user/signin`, {
@@ -75,7 +74,6 @@ export default function SignIn() {
 
             const { token, user } = response.data;
 
-            // localStorage.setItem('customAuthToken', token);
             localStorage.setItem('token', token);
 
             setUser(user);
@@ -87,7 +85,6 @@ export default function SignIn() {
         }
     };
 
-    // Toggle password visibility
     const togglePasswordVisibility = () => {
         setShowPassword(!showPassword);
     };
@@ -120,7 +117,7 @@ export default function SignIn() {
                         {emailError && (
                             <p className="text-red-500 text-xs mt-1">{emailError}</p>
                         )}
-                        <p className="text-gray-500 text-xs mt-1">Email must start with (pavan) and end with (@gmail.com) currently only for gmail students.</p>
+                        <p className="text-gray-500 text-xs mt-1">Email must start with "pavan" and end with "@gmail.com"</p>
                     </div>
                     <div>
                         <div className="flex justify-between items-center mb-1">
@@ -160,11 +157,22 @@ export default function SignIn() {
 
                 <div className="mt-6 text-center">
                     <p className="text-gray-600">
-                        Dont have an account?{' '}
+                        Don't have an account?{' '}
                         <a href="/signup" className="text-blue-600 hover:underline font-medium">
                             Sign up
                         </a>
                     </p>
+                </div>
+
+                {/* Admin Sign In Button */}
+                <div className="mt-4">
+                    <button
+                        onClick={() => navigate('/admin/signin')}
+                        className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-gray-700 to-gray-900 text-white py-3 rounded-lg hover:from-gray-800 hover:to-black transition duration-300 font-medium shadow-md"
+                    >
+                        <Shield size={20} />
+                        Admin Sign In
+                    </button>
                 </div>
 
                 <div className="mt-6">

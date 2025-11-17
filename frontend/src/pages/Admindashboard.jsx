@@ -1,15 +1,21 @@
 /* eslint-disable react/prop-types */
-// src/components/admin/AdminDashboard.jsx
 import { useState, useEffect } from 'react';
 import { useRecoilState } from 'recoil';
 import { adminState } from "../state/adminAtom";
-import { Menu, LogOut, ChevronLeft, AlertTriangle, CheckCircle, XCircle, X } from 'lucide-react';
+import { 
+    Menu, LogOut, ChevronLeft, AlertTriangle, CheckCircle, 
+    XCircle, X, Calendar, PieChart, Users, Eye, Download, 
+    Plus, Edit, Trash2 
+} from 'lucide-react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import API_BASE_URL from '../config/api';
 
 export default function AdminDashboard() {
+    const navigate = useNavigate();
     const [admin, setAdmin] = useRecoilState(adminState);
+    
+    // State management
     const [events, setEvents] = useState([]);
     const [registrations, setRegistrations] = useState([]);
     const [selectedEvent, setSelectedEvent] = useState(null);
@@ -18,48 +24,53 @@ export default function AdminDashboard() {
     const [activeTab, setActiveTab] = useState('dashboard');
     const [isCreatingEvent, setIsCreatingEvent] = useState(false);
     const [isEditingEvent, setIsEditingEvent] = useState(false);
-    const navigate = useNavigate();
+    const [error, setError] = useState('');
+    const [toast, setToast] = useState({ show: false, message: '', type: '' });
+    
     const [eventForm, setEventForm] = useState({
         title: '',
         description: '',
         date: '',
         time: '',
         location: '',
-        capacity: 0,
-        price: 0
+        imageUrl: '',
+        videoUrl: ''
     });
-    const [error, setError] = useState('');
-    const [toast, setToast] = useState({ show: false, message: '', type: '' });
 
     // Configure axios with auth token
     useEffect(() => {
-        if (localStorage.getItem("token")) {
-            axios.defaults.headers.common['Authorization'] = `Bearer ${localStorage.getItem("token")}`;
+        const token = localStorage.getItem("token");
+        if (!token) {
+            navigate('/admin/signin');
+            return;
         }
-    }, [admin]);
-
-    useEffect(() => {
-        if (!localStorage.getItem("token")) {
-            navigate('/')
-        }
+        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     }, [navigate]);
 
     // Fetch initial data
     useEffect(() => {
-        fetchProfile();
-        fetchEvents();
+        const token = localStorage.getItem("token");
+        if (token) {
+            fetchProfile();
+            fetchEvents();
+        }
     }, []);
 
-    // API Functions
+    // ==================== API FUNCTIONS ====================
+    
     const fetchProfile = async () => {
         try {
             const response = await axios.get(`${API_BASE_URL}/admin/profile`);
             if (response.data.success) {
-                setAdmin(prevState => ({ ...prevState, ...response.data.admin }));
+                setAdmin(response.data.admin);
             }
         } catch (error) {
-            console.log(error);
-            handleError('Failed to load profile');
+            console.error('Profile fetch error:', error);
+            if (error.response?.status === 401) {
+                handleLogout();
+            } else {
+                handleError('Failed to load profile');
+            }
         }
     };
 
@@ -71,8 +82,12 @@ export default function AdminDashboard() {
                 setEvents(response.data.events);
             }
         } catch (error) {
-            console.log(error);
-            handleError('Failed to load events');
+            console.error('Events fetch error:', error);
+            if (error.response?.status === 401) {
+                handleLogout();
+            } else {
+                handleError('Failed to load events');
+            }
         } finally {
             setLoading(false);
         }
@@ -84,11 +99,11 @@ export default function AdminDashboard() {
             const response = await axios.get(`${API_BASE_URL}/admin/event/${eventId}/registrations`);
             if (response.data.success) {
                 setRegistrations(response.data.registrations);
-                setSelectedEvent(events.find(event => event._id === eventId));
+                setSelectedEvent(events.find(event => event.id === eventId));
                 setActiveTab('registrations');
             }
         } catch (error) {
-            console.log(error);
+            console.error('Registrations fetch error:', error);
             handleError('Failed to load registrations');
         } finally {
             setLoading(false);
@@ -101,14 +116,14 @@ export default function AdminDashboard() {
         try {
             const response = await axios.post(`${API_BASE_URL}/admin/create-event`, eventForm);
             if (response.data.success) {
-                setEvents([...events, response.data.event]);
+                await fetchEvents();
                 setIsCreatingEvent(false);
                 resetEventForm();
-                showToast('Event created successfully', 'success');
+                showToast('Event created successfully! Email notifications sent to all users.', 'success');
             }
         } catch (error) {
-            console.log(error);
-            handleError('Failed to create event');
+            console.error('Create event error:', error);
+            handleError(error.response?.data?.msg || 'Failed to create event');
         } finally {
             setLoading(false);
         }
@@ -118,40 +133,44 @@ export default function AdminDashboard() {
         e.preventDefault();
         setLoading(true);
         try {
-            const response = await axios.put(`${API_BASE_URL}/admin/edit-event/${selectedEvent._id}`, eventForm);
+            const response = await axios.put(`${API_BASE_URL}/admin/edit-event/${selectedEvent.id}`, eventForm);
             if (response.data.success) {
-                setEvents(events.map(event => event._id === selectedEvent._id ? response.data.event : event));
+                await fetchEvents();
                 setIsEditingEvent(false);
                 setSelectedEvent(null);
-                showToast(`Event "${response.data.event.title}" updated successfully`, 'success');
+                resetEventForm();
+                showToast(`Event "${response.data.event.title}" updated successfully!`, 'success');
             }
         } catch (error) {
-            console.log(error);
-            handleError('Failed to update event');
+            console.error('Update event error:', error);
+            handleError(error.response?.data?.msg || 'Failed to update event');
         } finally {
             setLoading(false);
         }
     };
 
     const handleDeleteEvent = async (eventId) => {
-        if (!confirm('Are you sure you want to delete this event?')) return;
+        if (!window.confirm('Are you sure you want to delete this event? This will also delete all registrations.')) {
+            return;
+        }
 
         setLoading(true);
         try {
             const response = await axios.delete(`${API_BASE_URL}/admin/delete-event/${eventId}`);
             if (response.data.success) {
-                setEvents(events.filter(event => event._id !== eventId));
-                showToast('Event deleted successfully', 'success');
+                await fetchEvents();
+                showToast('Event deleted successfully!', 'success');
             }
         } catch (error) {
-            console.log(error);
-            handleError('Failed to delete event');
+            console.error('Delete event error:', error);
+            handleError(error.response?.data?.msg || 'Failed to delete event');
         } finally {
             setLoading(false);
         }
     };
 
-    // Helper Functions
+    // ==================== HELPER FUNCTIONS ====================
+
     const showToast = (message, type = 'success') => {
         setToast({ show: true, message, type });
         setTimeout(() => setToast({ show: false, message: '', type: '' }), 5000);
@@ -161,7 +180,7 @@ export default function AdminDashboard() {
         setError(message);
         console.error(message);
         showToast(message, 'error');
-        setTimeout(() => setError(''), 5000); // Auto-dismiss after 5 seconds
+        setTimeout(() => setError(''), 5000);
     };
 
     const resetEventForm = () => {
@@ -171,8 +190,8 @@ export default function AdminDashboard() {
             date: '',
             time: '',
             location: '',
-            capacity: 0,
-            price: 0
+            imageUrl: '',
+            videoUrl: ''
         });
     };
 
@@ -180,12 +199,12 @@ export default function AdminDashboard() {
         setSelectedEvent(event);
         setEventForm({
             title: event.title,
-            description: event.description,
+            description: event.description || '',
             date: event.date.split('T')[0],
             time: event.time || '',
             location: event.location,
-            capacity: event.attendees?.length || 0,
-            price: event.price || 0
+            imageUrl: event.imageUrl || '',
+            videoUrl: event.videoUrl || ''
         });
         setIsEditingEvent(true);
     };
@@ -204,9 +223,9 @@ export default function AdminDashboard() {
             return;
         }
 
-        const csvHeaders = ["Event Name,Description,Date,Attendees"];
+        const csvHeaders = ["Event Name,Description,Date,Time,Location,Attendees"];
         const csvRows = events.map(event =>
-            `"${event.title}","${event.description}","${formatDate(event.date)}","${event.attendees?.length || 0}"`
+            `"${event.title}","${event.description || ''}","${formatDate(event.date)}","${event.time || ''}","${event.location}","${event.attendees?.length || 0}"`
         );
 
         const csvContent = [csvHeaders, ...csvRows].join("\n");
@@ -215,11 +234,11 @@ export default function AdminDashboard() {
 
         const a = document.createElement("a");
         a.href = url;
-        a.download = "events.csv";
+        a.download = `campushub_events_${new Date().toISOString().split('T')[0]}.csv`;
         a.click();
         URL.revokeObjectURL(url);
         
-        showToast("Events exported successfully", "success");
+        showToast("Events exported successfully!", "success");
     };
 
     const exportRegistrationsToCSV = () => {
@@ -230,7 +249,7 @@ export default function AdminDashboard() {
 
         const csvHeaders = ["Name,Email,Registered Date"];
         const csvRows = registrations.map(reg =>
-            `"${reg.user?.email.split("@")[0] || 'N/A'}","${reg.user?.email || 'N/A'}","${formatDate(reg.createdAt)}"`
+            `"${reg.user?.username || reg.user?.email.split("@")[0] || 'N/A'}","${reg.user?.email || 'N/A'}","${formatDate(reg.registeredAt)}"`
         );
 
         const csvContent = [csvHeaders, ...csvRows].join("\n");
@@ -239,20 +258,22 @@ export default function AdminDashboard() {
 
         const a = document.createElement("a");
         a.href = url;
-        a.download = `registrations_${selectedEvent.title.replace(/\s+/g, "_")}.csv`;
+        a.download = `${selectedEvent?.title.replace(/\s+/g, "_")}_registrations_${new Date().toISOString().split('T')[0]}.csv`;
         a.click();
         URL.revokeObjectURL(url);
         
-        showToast("Registrations exported successfully", "success");
+        showToast("Registrations exported successfully!", "success");
     };
 
     const handleLogout = () => {
         setAdmin(null);
-        localStorage.clear();
-        navigate('/');
-        axios.defaults.headers.common['Authorization'] = '';
+        localStorage.removeItem('token');
+        delete axios.defaults.headers.common['Authorization'];
+        navigate('/admin/signin');
         showToast("Logged out successfully", "success");
     };
+
+    // ==================== RENDER ====================
 
     return (
         <div className="flex h-screen bg-gray-50">
@@ -276,39 +297,37 @@ export default function AdminDashboard() {
                         {activeTab === 'registrations' && (
                             <button
                                 onClick={() => setActiveTab('events')}
-                                className="mr-3 text-gray-500 hover:text-gray-700 p-1"
+                                className="mr-3 text-gray-500 hover:text-gray-700 p-1 rounded hover:bg-gray-100 transition"
                             >
                                 <ChevronLeft size={20} />
                             </button>
                         )}
                         <h1 className="text-xl font-semibold text-gray-800">
-                            {activeTab === 'dashboard' && 'Dashboard'}
-                            {activeTab === 'events' && (isCreatingEvent ? 'Create Event' : isEditingEvent ? 'Edit Event' : 'Events')}
-                            {activeTab === 'registrations' && `Registrations - ${selectedEvent?.title}`}
+                            {activeTab === 'dashboard' && 'Dashboard Overview'}
+                            {activeTab === 'events' && (isCreatingEvent ? 'Create New Event' : isEditingEvent ? 'Edit Event' : 'Manage Events')}
+                            {activeTab === 'registrations' && `Event Registrations`}
                         </h1>
                     </div>
 
                     <div className="flex items-center space-x-4">
                         <div className="flex items-center space-x-3">
                             <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
-                                {admin?.username?.charAt(0).toUpperCase() || 'A'}
+                                {admin?.username?.charAt(0).toUpperCase() || admin?.adminName?.charAt(0).toUpperCase() || 'A'}
                             </div>
-                            {!sidebarCollapsed && (
-                                <span className="text-gray-700 font-medium">
-                                    {admin?.username || admin?.email?.split('@')[0] || 'Admin'}
-                                </span>
-                            )}
+                            <span className="text-gray-700 font-medium hidden md:block">
+                                {admin?.username || admin?.adminName || admin?.email?.split('@')[0] || 'Admin'}
+                            </span>
                         </div>
                     </div>
                 </header>
 
-                {/* Error message */}
+                {/* Error Banner */}
                 {error && (
                     <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 m-6 rounded flex items-start">
                         <AlertTriangle size={20} className="mr-2 flex-shrink-0 mt-0.5" />
                         <div className="flex-1">{error}</div>
                         <button className="text-red-500 hover:text-red-700" onClick={() => setError('')}>
-                            &times;
+                            <X size={16} />
                         </button>
                     </div>
                 )}
@@ -328,7 +347,7 @@ export default function AdminDashboard() {
                         <LoadingSpinner />
                     ) : (
                         <>
-                            {/* Dashboard Content */}
+                            {/* Dashboard View */}
                             {activeTab === 'dashboard' && (
                                 <DashboardView 
                                     events={events}
@@ -364,10 +383,11 @@ export default function AdminDashboard() {
                                     handleCreateEvent={handleCreateEvent}
                                     handleUpdateEvent={handleUpdateEvent}
                                     setSelectedEvent={setSelectedEvent}
+                                    resetEventForm={resetEventForm}
                                 />
                             )}
 
-                            {/* Registrations */}
+                            {/* Registrations View */}
                             {activeTab === 'registrations' && selectedEvent && (
                                 <RegistrationsView 
                                     selectedEvent={selectedEvent}
@@ -384,10 +404,9 @@ export default function AdminDashboard() {
     );
 }
 
-// src/components/admin/Sidebar.jsx
-import { Calendar, PieChart } from 'lucide-react';
+// ==================== SIDEBAR COMPONENT ====================
 
-export function Sidebar({ 
+function Sidebar({ 
     sidebarCollapsed, 
     setSidebarCollapsed, 
     activeTab, 
@@ -399,7 +418,11 @@ export function Sidebar({
 }) {
     const SidebarLink = ({ icon, label, tabName }) => (
         <div
-            className={`flex items-center px-4 py-3 rounded-lg transition-colors ${activeTab === tabName ? 'bg-blue-100 text-blue-600' : 'text-gray-600 hover:bg-gray-100'} cursor-pointer`}
+            className={`flex items-center px-4 py-3 rounded-lg transition-colors ${
+                activeTab === tabName 
+                    ? 'bg-blue-100 text-blue-600' 
+                    : 'text-gray-600 hover:bg-gray-100'
+            } cursor-pointer`}
             onClick={() => {
                 setActiveTab(tabName);
                 if (tabName === 'events') {
@@ -410,14 +433,18 @@ export function Sidebar({
             }}
         >
             {icon}
-            {!sidebarCollapsed && <span className="ml-3">{label}</span>}
+            {!sidebarCollapsed && <span className="ml-3 font-medium">{label}</span>}
         </div>
     );
 
     return (
-        <div className={`bg-white shadow-md transition-all duration-300 flex flex-col ${sidebarCollapsed ? 'w-20' : 'w-64'}`}>
+        <div className={`bg-white shadow-md transition-all duration-300 flex flex-col ${
+            sidebarCollapsed ? 'w-20' : 'w-64'
+        }`}>
             <div className="p-4 flex justify-between items-center border-b">
-                {!sidebarCollapsed && <h2 className="text-xl font-bold text-blue-600">CampusHub</h2>}
+                {!sidebarCollapsed && (
+                    <h2 className="text-xl font-bold text-blue-600">CampusHub</h2>
+                )}
                 <button
                     onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
                     className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
@@ -446,17 +473,16 @@ export function Sidebar({
                     onClick={handleLogout}
                 >
                     <LogOut size={20} />
-                    {!sidebarCollapsed && <span className="ml-3">Logout</span>}
+                    {!sidebarCollapsed && <span className="ml-3 font-medium">Logout</span>}
                 </div>
             </div>
         </div>
     );
 }
 
-// src/components/admin/DashboardView.jsx
-import {  Users, Eye, Download } from 'lucide-react';
+// ==================== DASHBOARD VIEW COMPONENT ====================
 
-export function DashboardView({ 
+function DashboardView({ 
     events, 
     formatDate, 
     exportToCSV, 
@@ -468,8 +494,8 @@ export function DashboardView({
         <div className="bg-white rounded-lg shadow-sm p-6 transition-all hover:shadow-md">
             <div className="flex justify-between items-center">
                 <div>
-                    <p className="text-gray-500 text-sm">{label}</p>
-                    <h3 className="text-3xl font-bold mt-1">{value}</h3>
+                    <p className="text-gray-500 text-sm font-medium">{label}</p>
+                    <h3 className="text-3xl font-bold mt-1 text-gray-800">{value}</h3>
                 </div>
                 <div className={`p-3 ${color} rounded-full`}>
                     {icon}
@@ -478,19 +504,12 @@ export function DashboardView({
         </div>
     );
 
-    const ActionButton = ({ onClick, icon, color, title }) => (
-        <button
-            onClick={onClick}
-            className={`p-1.5 ${color} rounded-full hover:bg-opacity-20 transition-colors`}
-            title={title}
-        >
-            {icon}
-        </button>
-    );
+    const totalAttendees = events.reduce((sum, event) => sum + (event.attendees?.length || 0), 0);
+    const upcomingEvents = events.filter(event => new Date(event.date) > new Date()).length;
 
     return (
         <>
-            {/* Stats */}
+            {/* Statistics Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                 <StatCard
                     label="Total Events"
@@ -500,114 +519,104 @@ export function DashboardView({
                 />
                 <StatCard
                     label="Total Attendees"
-                    value={events.reduce((sum, event) => sum + (event.attendees?.length || 0), 0)}
+                    value={totalAttendees}
                     icon={<Users size={24} className="text-green-600" />}
                     color="bg-green-100"
                 />
                 <StatCard
                     label="Upcoming Events"
-                    value={events.filter(event => new Date(event.date) > new Date()).length}
+                    value={upcomingEvents}
                     icon={<PieChart size={24} className="text-purple-600" />}
                     color="bg-purple-100"
                 />
             </div>
 
-            <div className="w-full">
-                {/* Recent events */}
-                <div className="lg:col-span-2">
-                    <div className="bg-white rounded-lg shadow-sm h-full">
-                        {/* Header Section */}
-                        <div className="p-6 border-b flex justify-between items-center">
-                            <h2 className="text-lg font-semibold">Recent Events</h2>
-                            <div className="flex items-center gap-3">
-                                <button
-                                    onClick={exportToCSV}
-                                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-green-500 to-green-700 rounded-lg shadow-md hover:from-green-600 hover:to-green-800 transform hover:scale-105 transition-all"
-                                >
-                                    <Download size={16} />
-                                    Export CSV
-                                </button>
-                                <button
-                                    onClick={() => setActiveTab('events')}
-                                    className="text-blue-500 text-sm hover:underline"
-                                >
-                                    View All
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Table Section */}
-                        <div className="p-5 overflow-x-auto">
-                            {events.length > 0 ? (
-                                <table className="w-full">
-                                    <thead>
-                                        <tr className="text-left text-gray-500 border-b">
-                                            <th className="pb-3 px-5">Event</th>
-                                            <th className="pb-3 px-5">Description</th>
-                                            <th className="pb-3 px-5">Date & Time</th>
-                                            <th className="pb-3 px-5">Location</th>
-                                            <th className="pb-3 px-5 text-center">Attendees</th>
-                                            <th className="pb-3 px-5 w-20 text-center">View</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {events.map(event => (
-                                            <tr key={event._id} className="border-b last:border-0 hover:bg-gray-50 transition">
-                                                {/* Event Title */}
-                                                <td className="px-5 py-3 font-semibold text-gray-800 whitespace-nowrap">{event.title}</td>
-
-                                                {/* Description */}
-                                                <td className="px-5 py-3 text-gray-600 truncate max-w-xs">{event.description}</td>
-
-                                                {/* Date & Time */}
-                                                <td className="px-5 py-3 text-gray-700">
-                                                    {formatDate(event.date)}
-                                                    <br />
-                                                    <span className="text-sm text-gray-500">{event.time}</span>
-                                                </td>
-
-                                                {/* Location */}
-                                                <td className="px-5 py-3 text-gray-700">{event.location}</td>
-
-                                                {/* Attendees Count */}
-                                                <td className="px-5 py-3 text-gray-700 text-center">{event.attendees?.length || 0}</td>
-
-                                                {/* View Registrations Button */}
-                                                <td className="px-5 py-3 text-center">
-                                                    <ActionButton
-                                                        onClick={() => fetchEventRegistrations(event._id)}
-                                                        icon={<Eye size={18} />}
-                                                        color="text-blue-500 hover:text-blue-700 transition"
-                                                        title="View Registrations"
-                                                    />
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            ) : (
-                                <div className="text-center py-8 text-gray-500">
-                                    No events found.
-                                    <button
-                                        className="text-blue-500 hover:underline ml-2"
-                                        onClick={() => { setActiveTab('events'); setIsCreatingEvent(true); }}
-                                    >
-                                        Create your first event?
-                                    </button>
-                                </div>
-                            )}
-                        </div>
+            {/* Recent Events Table */}
+            <div className="bg-white rounded-lg shadow-sm">
+                <div className="p-6 border-b flex justify-between items-center">
+                    <div>
+                        <h2 className="text-lg font-semibold text-gray-800">Recent Events</h2>
+                        <p className="text-sm text-gray-500 mt-1">Manage and track your campus events</p>
                     </div>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={exportToCSV}
+                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-green-500 to-green-700 rounded-lg shadow-md hover:from-green-600 hover:to-green-800 transform hover:scale-105 transition-all"
+                        >
+                            <Download size={16} />
+                            Export CSV
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('events')}
+                            className="text-blue-600 text-sm font-medium hover:underline"
+                        >
+                            View All →
+                        </button>
+                    </div>
+                </div>
+
+                <div className="p-5 overflow-x-auto">
+                    {events.length > 0 ? (
+                        <table className="w-full">
+                            <thead>
+                                <tr className="text-left text-gray-500 text-sm border-b">
+                                    <th className="pb-3 px-5 font-semibold">Event</th>
+                                    <th className="pb-3 px-5 font-semibold">Date & Time</th>
+                                    <th className="pb-3 px-5 font-semibold">Location</th>
+                                    <th className="pb-3 px-5 text-center font-semibold">Attendees</th>
+                                    <th className="pb-3 px-5 text-center font-semibold">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {events.slice(0, 5).map(event => (
+                                    <tr key={event.id} className="border-b last:border-0 hover:bg-gray-50 transition">
+                                        <td className="px-5 py-4 font-semibold text-gray-800">{event.title}</td>
+                                        <td className="px-5 py-4 text-gray-700">
+                                            <div>{formatDate(event.date)}</div>
+                                            {event.time && <div className="text-sm text-gray-500">{event.time}</div>}
+                                        </td>
+                                        <td className="px-5 py-4 text-gray-700">{event.location}</td>
+                                        <td className="px-5 py-4 text-center">
+                                            <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 font-semibold">
+                                                {event.attendees?.length || 0}
+                                            </span>
+                                        </td>
+                                        <td className="px-5 py-4 text-center">
+                                            <button
+                                                onClick={() => fetchEventRegistrations(event.id)}
+                                                className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 hover:underline transition font-medium"
+                                                title="View Registrations"
+                                            >
+                                                <Eye size={18} />
+                                                <span className="text-sm">View</span>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    ) : (
+                        <div className="text-center py-12">
+                            <Calendar size={48} className="mx-auto text-gray-400 mb-4" />
+                            <p className="text-gray-500 mb-4">No events found. Start by creating your first event!</p>
+                            <button
+                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                                onClick={() => { setActiveTab('events'); setIsCreatingEvent(true); }}
+                            >
+                                <Plus size={18} className="inline mr-2" />
+                                Create Event
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
         </>
     );
 }
 
-// src/components/admin/EventsView.jsx
-import { Plus, Edit, Trash2 } from 'lucide-react';
+// ==================== EVENTS VIEW COMPONENT ====================
 
-export function EventsView({
+function EventsView({
     events,
     setIsCreatingEvent,
     fetchEventRegistrations,
@@ -615,37 +624,18 @@ export function EventsView({
     handleDeleteEvent,
     formatDate
 }) {
-    const EventRow = ({ event, actions }) => (
-        <tr className="border-b last:border-0 hover:bg-gray-50 transition-colors">
-            <td className="py-4 pl-4 font-medium">{event.title}</td>
-            <td className="py-4">{formatDate(event.date)}</td>
-            <td className="py-4">{event.location}</td>
-            <td className="py-4">{event.attendees?.length || 0}</td>
-            <td className="py-4 space-x-2 flex">
-                {actions}
-            </td>
-        </tr>
-    );
-
-    const ActionButton = ({ onClick, icon, color, title }) => (
-        <button
-            onClick={onClick}
-            className={`p-1.5 ${color} rounded-full hover:bg-opacity-20 transition-colors`}
-            title={title}
-        >
-            {icon}
-        </button>
-    );
-
     return (
         <div className="bg-white rounded-lg shadow-sm p-6">
             <div className="flex justify-between items-center mb-6">
-                <h2 className="text-lg font-semibold">Manage Events</h2>
+                <div>
+                    <h2 className="text-lg font-semibold text-gray-800">Manage Events</h2>
+                    <p className="text-sm text-gray-500 mt-1">Create, edit, and manage all campus events</p>
+                </div>
                 <button
                     onClick={() => setIsCreatingEvent(true)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center font-medium shadow-sm"
                 >
-                    <Plus size={18} className="mr-1" /> Create New Event
+                    <Plus size={18} className="mr-2" /> Create New Event
                 </button>
             </div>
 
@@ -653,48 +643,63 @@ export function EventsView({
                 {events.length > 0 ? (
                     <table className="w-full">
                         <thead>
-                            <tr className="text-left text-gray-500 border-b">
-                                <th className="pb-3 pl-4">Event Name</th>
-                                <th className="pb-3">Date</th>
-                                <th className="pb-3">Location</th>
-                                <th className="pb-3">Attendees</th>
-                                <th className="pb-3">Actions</th>
+                            <tr className="text-left text-gray-500 text-sm border-b">
+                                <th className="pb-3 pl-4 font-semibold">Event Name</th>
+                                <th className="pb-3 font-semibold">Date</th>
+                                <th className="pb-3 font-semibold">Location</th>
+                                <th className="pb-3 text-center font-semibold">Attendees</th>
+                                <th className="pb-3 text-center font-semibold">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {events.map(event => (
-                                <EventRow
-                                    key={event._id}
-                                    event={event}
-                                    actions={
-                                        <>
-                                            <ActionButton
-                                                onClick={() => fetchEventRegistrations(event._id)}
-                                                icon={<Eye size={18} />}
-                                                color="text-blue-500"
-                                                title="View Registrations"
-                                            />
-                                            <ActionButton
-                                                onClick={() => startEditEvent(event)}
-                                                icon={<Edit size={18} />}
-                                                color="text-green-500"
-                                                title="Edit Event"
-                                            />
-                                            <ActionButton
-                                                onClick={() => handleDeleteEvent(event._id)}
-                                                icon={<Trash2 size={18} />}
-                                                color="text-red-500"
-                                                title="Delete Event"
-                                            />
-                                        </>
-                                    }
-                                />
+                                <tr key={event.id} className="border-b last:border-0 hover:bg-gray-50 transition-colors">
+                                    <td className="py-4 pl-4 font-medium text-gray-800">{event.title}</td>
+                                    <td className="py-4 text-gray-700">{formatDate(event.date)}</td>
+                                    <td className="py-4 text-gray-700">{event.location}</td>
+                                    <td className="py-4 text-center">
+                                        <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 font-semibold">
+                                            {event.attendees?.length || 0}
+                                        </span>
+                                    </td>
+                                    <td className="py-4 flex justify-center gap-2">
+                                        <button
+                                            onClick={() => fetchEventRegistrations(event.id)}
+                                            className="p-2 text-blue-500 hover:bg-blue-100 rounded-full transition-colors"
+                                            title="View Registrations"
+                                        >
+                                            <Eye size={18} />
+                                        </button>
+                                        <button
+                                            onClick={() => startEditEvent(event)}
+                                            className="p-2 text-green-500 hover:bg-green-100 rounded-full transition-colors"
+                                            title="Edit Event"
+                                        >
+                                            <Edit size={18} />
+                                        </button>
+                                        <button
+                                            onClick={() => handleDeleteEvent(event.id)}
+                                            className="p-2 text-red-500 hover:bg-red-100 rounded-full transition-colors"
+                                            title="Delete Event"
+                                        >
+                                            <Trash2 size={18} />
+                                        </button>
+                                    </td>
+                                </tr>
                             ))}
                         </tbody>
                     </table>
                 ) : (
-                    <div className="text-center py-8 text-gray-500">
-                        No events found. Create your first event by clicking the button above.
+                    <div className="text-center py-12">
+                        <Calendar size={48} className="mx-auto text-gray-400 mb-4" />
+                        <p className="text-gray-500 mb-4">No events created yet</p>
+                        <button
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                            onClick={() => setIsCreatingEvent(true)}
+                        >
+                            <Plus size={18} className="inline mr-2" />
+                            Create Your First Event
+                        </button>
                     </div>
                 )}
             </div>
@@ -702,9 +707,9 @@ export function EventsView({
     );
 }
 
-// src/components/admin/RegistrationsView.jsx
+// ==================== REGISTRATIONS VIEW COMPONENT ====================
 
-export  function RegistrationsView({ 
+function RegistrationsView({ 
     selectedEvent, 
     registrations, 
     formatDate, 
@@ -715,42 +720,48 @@ export  function RegistrationsView({
             <div className="mb-6">
                 <div className="mb-4 flex justify-between items-center">
                     <div>
-                        <h3 className="text-lg font-medium">{selectedEvent.title}</h3>
-                        <p className="text-gray-500">{formatDate(selectedEvent.date)} | {selectedEvent.location}</p>
+                        <h3 className="text-lg font-semibold text-gray-800">{selectedEvent.title}</h3>
+                        <p className="text-gray-500 mt-1">
+                            {formatDate(selectedEvent.date)} • {selectedEvent.time} • {selectedEvent.location}
+                        </p>
+                        <p className="text-sm text-gray-600 mt-2">
+                            <strong>{registrations.length}</strong> {registrations.length === 1 ? 'person' : 'people'} registered
+                        </p>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={exportRegistrationsToCSV}
-                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-green-600 text-white rounded-full shadow-md hover:bg-green-700 hover:shadow-lg transition duration-300"
-                        >
-                            <Download size={16} /> Export CSV
-                        </button>
-                    </div>
+                    <button
+                        onClick={exportRegistrationsToCSV}
+                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-green-600 text-white rounded-lg shadow-md hover:bg-green-700 transition"
+                    >
+                        <Download size={16} /> Export CSV
+                    </button>
                 </div>
 
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto mt-6">
                     {registrations.length > 0 ? (
                         <table className="w-full">
                             <thead>
-                                <tr className="text-left text-gray-500 border-b">
-                                    <th className="pb-3 pl-4">Name</th>
-                                    <th className="pb-3">Email</th>
-                                    <th className="pb-3">Registered Date</th>
+                                <tr className="text-left text-gray-500 text-sm border-b">
+                                    <th className="pb-3 pl-4 font-semibold">Name</th>
+                                    <th className="pb-3 font-semibold">Email</th>
+                                    <th className="pb-3 font-semibold">Registered Date</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {registrations.map(registration => (
-                                    <tr key={registration._id} className="border-b last:border-0 hover:bg-gray-50 transition-colors">
-                                        <td className="py-4 pl-4">{registration.user?.email.split("@")[0] || 'N/A'}</td>
-                                        <td className="py-4">{registration.user?.email || 'N/A'}</td>
-                                        <td className="py-4">{formatDate(registration.createdAt)}</td>
+                                {registrations.map((registration, index) => (
+                                    <tr key={registration.id || index} className="border-b last:border-0 hover:bg-gray-50 transition-colors">
+                                        <td className="py-4 pl-4 font-medium text-gray-800">
+                                            {registration.user?.username || registration.user?.email?.split("@")[0] || 'N/A'}
+                                        </td>
+                                        <td className="py-4 text-gray-700">{registration.user?.email || 'N/A'}</td>
+                                        <td className="py-4 text-gray-700">{formatDate(registration.registeredAt)}</td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
                     ) : (
-                        <div className="text-center py-8 text-gray-500">
-                            No registrations found for this event.
+                        <div className="text-center py-12">
+                            <Users size={48} className="mx-auto text-gray-400 mb-4" />
+                            <p className="text-gray-500">No registrations for this event yet</p>
                         </div>
                     )}
                 </div>
@@ -759,7 +770,9 @@ export  function RegistrationsView({
     );
 }
 
-export  function EventForm({
+// ==================== EVENT FORM COMPONENT ====================
+
+function EventForm({
     eventForm,
     setEventForm,
     isCreatingEvent,
@@ -768,10 +781,31 @@ export  function EventForm({
     setIsEditingEvent,
     handleCreateEvent,
     handleUpdateEvent,
-    setSelectedEvent
+    setSelectedEvent,
+    resetEventForm
 }) {
+    const handleCancel = () => {
+        if (isCreatingEvent) setIsCreatingEvent(false);
+        if (isEditingEvent) {
+            setIsEditingEvent(false);
+            setSelectedEvent(null);
+        }
+        resetEventForm();
+    };
+
     return (
         <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="mb-6">
+                <h2 className="text-lg font-semibold text-gray-800">
+                    {isCreatingEvent ? 'Create New Event' : 'Edit Event'}
+                </h2>
+                <p className="text-sm text-gray-500 mt-1">
+                    {isCreatingEvent 
+                        ? 'Fill in the details to create a new campus event' 
+                        : 'Update the event details below'}
+                </p>
+            </div>
+
             <form onSubmit={isCreatingEvent ? handleCreateEvent : handleUpdateEvent}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Event Title */}
@@ -782,29 +816,26 @@ export  function EventForm({
                         <input
                             type="text"
                             id="title"
-                            name="title"
                             required
                             value={eventForm.title}
                             onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })}
-                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            placeholder="Enter event title"
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                            placeholder="e.g., Annual Tech Fest 2024"
                         />
                     </div>
 
                     {/* Description */}
                     <div className="col-span-2">
                         <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-                            Description *
+                            Description
                         </label>
                         <textarea
                             id="description"
-                            name="description"
-                            required
                             value={eventForm.description}
                             onChange={(e) => setEventForm({ ...eventForm, description: e.target.value })}
                             rows="4"
-                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            placeholder="Enter event description"
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                            placeholder="Provide a detailed description of the event..."
                         ></textarea>
                     </div>
 
@@ -816,11 +847,10 @@ export  function EventForm({
                         <input
                             type="date"
                             id="date"
-                            name="date"
                             required
                             value={eventForm.date}
                             onChange={(e) => setEventForm({ ...eventForm, date: e.target.value })}
-                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
                         />
                     </div>
 
@@ -832,85 +862,74 @@ export  function EventForm({
                         <input
                             type="time"
                             id="time"
-                            name="time"
                             required
                             value={eventForm.time}
                             onChange={(e) => setEventForm({ ...eventForm, time: e.target.value })}
-                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
                         />
                     </div>
 
                     {/* Location */}
-                    <div>
+                    <div className="col-span-2">
                         <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">
                             Location *
                         </label>
                         <input
                             type="text"
                             id="location"
-                            name="location"
                             required
                             value={eventForm.location}
                             onChange={(e) => setEventForm({ ...eventForm, location: e.target.value })}
-                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            placeholder="Enter event location"
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                            placeholder="e.g., Main Auditorium, Building A"
                         />
                     </div>
 
-                    {/* Capacity */}
-                    <div>
-                        <label htmlFor="capacity" className="block text-sm font-medium text-gray-700 mb-1">
-                            Capacity *
+                    {/* Image URL */}
+                    <div className="col-span-2">
+                        <label htmlFor="imageUrl" className="block text-sm font-medium text-gray-700 mb-1">
+                            Image URL <span className="text-gray-400">(optional)</span>
                         </label>
                         <input
-                            type="number"
-                            id="capacity"
-                            name="capacity"
-                            required
-                            min="1"
-                            value={eventForm.capacity}
-                            onChange={(e) => setEventForm({ ...eventForm, capacity: parseInt(e.target.value) })}
-                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            placeholder="Maximum number of attendees"
+                            type="url"
+                            id="imageUrl"
+                            value={eventForm.imageUrl}
+                            onChange={(e) => setEventForm({ ...eventForm, imageUrl: e.target.value })}
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                            placeholder="https://example.com/event-image.jpg"
                         />
+                        <p className="text-xs text-gray-500 mt-1">Provide a direct link to an event banner or poster image</p>
                     </div>
 
-                    {/* Price */}
-                    <div>
-                        <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
-                            Price ($)
+                    {/* Video URL */}
+                    <div className="col-span-2">
+                        <label htmlFor="videoUrl" className="block text-sm font-medium text-gray-700 mb-1">
+                            Video URL <span className="text-gray-400">(optional)</span>
                         </label>
                         <input
-                            type="number"
-                            id="price"
-                            name="price"
-                            min="0"
-                            step="0.01"
-                            value={eventForm.price}
-                            onChange={(e) => setEventForm({ ...eventForm, price: parseFloat(e.target.value) })}
-                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            placeholder="Enter event price (0 for free events)"
+                            type="url"
+                            id="videoUrl"
+                            value={eventForm.videoUrl}
+                            onChange={(e) => setEventForm({ ...eventForm, videoUrl: e.target.value })}
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                            placeholder="https://youtube.com/watch?v=..."
                         />
+                        <p className="text-xs text-gray-500 mt-1">Link to a promotional video or live stream</p>
                     </div>
                 </div>
 
-                <div className="mt-8 flex justify-end space-x-3">
+                {/* Action Buttons */}
+                <div className="mt-8 flex justify-end gap-3">
                     <button
                         type="button"
-                        className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors"
-                        onClick={() => {
-                            if (isCreatingEvent) setIsCreatingEvent(false);
-                            if (isEditingEvent) {
-                                setIsEditingEvent(false);
-                                setSelectedEvent(null);
-                            }
-                        }}
+                        className="px-6 py-2.5 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                        onClick={handleCancel}
                     >
                         Cancel
                     </button>
                     <button
                         type="submit"
-                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                        className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm"
                     >
                         {isCreatingEvent ? 'Create Event' : 'Update Event'}
                     </button>
@@ -920,18 +939,20 @@ export  function EventForm({
     );
 }
 
+// ==================== LOADING SPINNER COMPONENT ====================
 
-export  function LoadingSpinner() {
+function LoadingSpinner() {
     return (
-        <div className="flex justify-center items-center h-64">
+        <div className="flex flex-col justify-center items-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
-            <span className="ml-3 text-gray-600">Loading...</span>
+            <span className="ml-3 text-gray-600 mt-4">Loading...</span>
         </div>
     );
 }
 
+// ==================== TOAST NOTIFICATION COMPONENT ====================
 
-export function Toast({ message, type = 'success', onClose }) {
+function Toast({ message, type = 'success', onClose }) {
     useEffect(() => {
         const timer = setTimeout(() => {
             onClose();
@@ -967,7 +988,7 @@ export function Toast({ message, type = 'success', onClose }) {
     };
 
     return (
-        <div className={`fixed top-5 right-5 z-50 flex items-center p-4 rounded-lg shadow-md border ${getBackgroundColor()} animate-slideIn`}>
+        <div className={`fixed top-5 right-5 z-50 flex items-center p-4 rounded-lg shadow-lg border ${getBackgroundColor()} animate-slideIn max-w-md`}>
             <div className="flex items-center">
                 {getIcon()}
                 <div className="ml-3 mr-6">
@@ -976,7 +997,7 @@ export function Toast({ message, type = 'success', onClose }) {
             </div>
             <button
                 onClick={onClose}
-                className="ml-auto text-gray-400 hover:text-gray-500 focus:outline-none"
+                className="ml-auto text-gray-400 hover:text-gray-600 focus:outline-none transition"
                 aria-label="Close"
             >
                 <X size={16} />
