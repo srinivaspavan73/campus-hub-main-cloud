@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const { z } = require('zod');
 const nodemailer = require('nodemailer');
 const dotenv = require('dotenv');
+// Database models
 
 const { User, Event, Registration, Admin } = require('./db/db');
 
