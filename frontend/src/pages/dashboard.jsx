@@ -18,36 +18,32 @@ export default function Dashboard() {
     const [searchQuery, setSearchQuery] = useState("");
 
     useEffect(() => {
-        // Check for the correct token key
-        // const token = localStorage.getItem('customAuthToken');
         const token = localStorage.getItem('token');
         if (!token) {
             navigate('/signin');
             return;
         }
 
-        // Set up axios defaults for all requests
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
-        // Fetch both profile and events data
         const fetchData = async () => {
             try {
                 setLoading(true);
-const [profileRes, eventsRes] = await Promise.all([
-    axios.get(`${API_BASE_URL}/user/profile`),
-    axios.get(`${API_BASE_URL}/user/events`)
-]);
+                const [profileRes, eventsRes] = await Promise.all([
+                    axios.get(`${API_BASE_URL}/user/profile`),
+                    axios.get(`${API_BASE_URL}/user/events`)
+                ]);
+
+                console.log('Profile data:', profileRes.data.user);
+                console.log('Events data:', eventsRes.data.events);
 
                 setUserProfile(profileRes.data.user);
-                // Handle the events array from the response
                 setEvents(eventsRes.data.events || []);
             } catch (err) {
                 console.error("Error fetching data:", err);
                 setError(err.response?.data?.msg || "Failed to load dashboard data");
 
-                // Handle unauthorized errors (expired token)
                 if (err.response?.status === 401) {
-                    // localStorage.removeItem('customAuthToken');
                     localStorage.removeItem('token');
                     navigate('/signin');
                 }
@@ -61,12 +57,12 @@ const [profileRes, eventsRes] = await Promise.all([
 
     const images_urls = [
         "./bg1.svg", "./bg2.svg", "./bg3.svg", "./bg4.svg", "./bg5.svg", "./bg6.svg", "./bg7.svg"
-    ]
+    ];
 
     const getRandomeimageIndexes = () => {
         const randomNumberBetween0and2 = Math.floor(Math.random() * 6);
         return randomNumberBetween0and2;
-    }
+    };
 
     const handleRegisterForEvent = async (eventId) => {
         try {
@@ -77,19 +73,17 @@ const [profileRes, eventsRes] = await Promise.all([
             setEvents(prevEvents =>
                 prevEvents.map(event =>
                     event.id === eventId
-                        ? { ...event, attendees: [...(event.attendees || []), userProfile.id] }
+                        ? { ...event, attendees: [...(event.attendees || []), { id: userProfile._id }] }
                         : event
                 )
             );
 
-            // Show success notification
             setNotification({
                 show: true,
                 message: response.data.msg || "Registered successfully!",
                 type: "success"
             });
 
-            // Hide notification after 3 seconds
             setTimeout(() => {
                 setNotification({ show: false, message: "", type: "" });
             }, 3000);
@@ -112,17 +106,37 @@ const [profileRes, eventsRes] = await Promise.all([
     };
 
     const handleLogout = () => {
-        // localStorage.removeItem('customAuthToken');
-         localStorage.removeItem('token');
+        localStorage.removeItem('token');
         navigate('/');
     };
 
-    // Helper function to check if an event is registered
+    // ✅ FIXED: Helper function to check if an event is registered
     const isEventRegistered = (event) => {
         if (!userProfile || !userProfile._id) return false;
 
-        return Array.isArray(event.attendees) &&
-            event.attendees.some(attendee => attendee.id === userProfile.id);
+        // Check if attendees array exists
+        if (!Array.isArray(event.attendees)) return false;
+
+        // Log for debugging
+        console.log('Checking registration for event:', event.title);
+        console.log('User ID:', userProfile._id);
+        console.log('Attendees:', event.attendees);
+
+        // The backend returns attendees as an array of objects with 'id' property
+        // Check both id and _id to be safe
+        return event.attendees.some(attendee => {
+            // Handle different formats: ObjectId string, {id: ...}, {_id: ...}
+            if (typeof attendee === 'string') {
+                return attendee === userProfile._id || attendee === userProfile.id;
+            }
+            if (typeof attendee === 'object') {
+                return attendee.id === userProfile._id || 
+                       attendee.id === userProfile.id ||
+                       attendee._id === userProfile._id ||
+                       attendee._id === userProfile.id;
+            }
+            return false;
+        });
     };
 
     // Filter events based on search query
@@ -144,6 +158,11 @@ const [profileRes, eventsRes] = await Promise.all([
     // Apply search filter
     const registeredEvents = filterEvents(allRegisteredEvents);
     const unregisteredEvents = filterEvents(allUnregisteredEvents);
+
+    // Debug logs
+    console.log('Total events:', events.length);
+    console.log('Registered events:', allRegisteredEvents.length);
+    console.log('Unregistered events:', allUnregisteredEvents.length);
 
     if (loading) {
         return (
@@ -174,7 +193,6 @@ const [profileRes, eventsRes] = await Promise.all([
         );
     }
 
-    // Format date/time for display
     const formatEventDateTime = (dateString, timeString) => {
         const date = new Date(dateString);
         const formattedDate = date.toLocaleDateString('en-US', {
@@ -186,7 +204,6 @@ const [profileRes, eventsRes] = await Promise.all([
         return timeString ? `${formattedDate} at ${timeString}` : formattedDate;
     };
 
-    // Event card component for DRY code
     const EventCard = ({ event, isRegistered }) => (
         <div className="border rounded-lg overflow-hidden hover:shadow-md transition">
             <div className="h-40 bg-blue-100 flex items-center justify-center">
@@ -199,18 +216,14 @@ const [profileRes, eventsRes] = await Promise.all([
                     />
                 ) : (
                     <div className="flex items-center justify-center w-full h-full bg-gray-200">
-
                         <img
                             src={images_urls[getRandomeimageIndexes()]}
                             alt={event.title}
                             className="w-full h-full object-contain"
                             onError={(e) => (e.currentTarget.style.display = 'none')}
                         />
-
-
                     </div>
                 )}
-
             </div>
             <div className="p-4">
                 <h3 className="font-semibold text-lg text-gray-800">{event.title}</h3>
@@ -244,7 +257,6 @@ const [profileRes, eventsRes] = await Promise.all([
         </div>
     );
 
-    // Empty state component for no results
     const EmptyState = ({ message, filteredBySearch }) => (
         <div className="text-center py-8">
             <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
@@ -265,7 +277,7 @@ const [profileRes, eventsRes] = await Promise.all([
     );
 
     return (
-        <div className="min-h-screen bg-gray-50 ">
+        <div className="min-h-screen bg-gray-50">
             {/* Notification */}
             {notification.show && (
                 <div className={`fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg ${notification.type === "success"
@@ -282,18 +294,14 @@ const [profileRes, eventsRes] = await Promise.all([
                     <h1 className="text-2xl font-semibold text-gray-800">CampusHub</h1>
                     <div className="flex items-center space-x-4">
                         <div className="flex items-center gap-2">
-                            {/* Circle with First Letter of Username */}
                             <div className="w-8 h-8 flex items-center justify-center rounded-full bg-blue-500 text-white font-medium">
                                 {user?.username?.charAt(0).toUpperCase() || userProfile?.username?.charAt(0).toUpperCase()}
                             </div>
-
-                            {/* User Info */}
                             <div className="text-right">
                                 <p className="text-sm text-gray-600 text-left">Hello,</p>
                                 <p className="font-medium">{user?.username || userProfile?.username}</p>
                             </div>
                         </div>
-
                         <button
                             onClick={handleLogout}
                             className="px-3 py-1 bg-red-100 text-red-600 rounded-md hover:bg-red-200 transition text-sm"
@@ -306,7 +314,7 @@ const [profileRes, eventsRes] = await Promise.all([
 
             {/* Main Content */}
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                {/* Search bar section */}
+                {/* Search bar */}
                 <div className="bg-white shadow rounded-lg overflow-hidden mb-8">
                     <div className="p-6">
                         <div className="relative">
@@ -376,13 +384,41 @@ const [profileRes, eventsRes] = await Promise.all([
 
                     {/* Events Sections */}
                     <div className="lg:col-span-3 space-y-8">
-
+                        {/* Registered Events Section */}
+                        <div className="bg-white shadow rounded-lg overflow-hidden">
+                            <div className="p-6 border-b bg-green-50">
+                                <h2 className="text-xl font-semibold text-green-800">My Registered Events</h2>
+                                <p className="text-gray-600 text-sm mt-1">Events you are attending ({registeredEvents.length})</p>
+                            </div>
+                            <div className="p-6">
+                                {registeredEvents.length === 0 ? (
+                                    <EmptyState
+                                        message={
+                                            searchQuery
+                                                ? "No registered events match your search criteria."
+                                                : "You haven't registered for any events yet."
+                                        }
+                                        filteredBySearch={searchQuery && allRegisteredEvents.length > 0}
+                                    />
+                                ) : (
+                                    <div className="grid gap-6 md:grid-cols-2">
+                                        {registeredEvents.map((event) => (
+                                            <EventCard
+                                                key={event.id}
+                                                event={event}
+                                                isRegistered={true}
+                                            />
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
 
                         {/* Available Events Section */}
                         <div className="bg-white shadow rounded-lg overflow-hidden">
                             <div className="p-6 border-b bg-blue-50">
                                 <h2 className="text-xl font-semibold text-blue-800">Events to Register</h2>
-                                <p className="text-gray-600 text-sm mt-1">Upcoming campus events</p>
+                                <p className="text-gray-600 text-sm mt-1">Upcoming campus events ({unregisteredEvents.length})</p>
                             </div>
                             <div className="p-6">
                                 {unregisteredEvents.length === 0 ? (
@@ -406,41 +442,10 @@ const [profileRes, eventsRes] = await Promise.all([
                                     </div>
                                 )}
                             </div>
-
-                            {/* Registered Events Section */}
-                            <div className="bg-white shadow rounded-lg overflow-hidden">
-                                <div className="p-6 border-b bg-green-50">
-                                    <h2 className="text-xl font-semibold text-green-800">My Registered Events</h2>
-                                    <p className="text-gray-600 text-sm mt-1">Events you are attending</p>
-                                </div>
-                                <div className="p-6">
-                                    {registeredEvents.length === 0 ? (
-                                        <EmptyState
-                                            message={
-                                                searchQuery
-                                                    ? "No registered events match your search criteria."
-                                                    : "You haven't registered for any events yet."
-                                            }
-                                            filteredBySearch={searchQuery && allRegisteredEvents.length > 0}
-                                        />
-                                    ) : (
-                                        <div className="grid gap-6 md:grid-cols-2">
-                                            {registeredEvents.map((event) => (
-                                                <EventCard
-                                                    key={event.id}
-                                                    event={event}
-                                                    isRegistered={true}
-                                                />
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>
             </main>
-
         </div>
     );
 }
