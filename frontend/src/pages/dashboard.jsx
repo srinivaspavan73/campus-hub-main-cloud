@@ -1,7 +1,7 @@
 /* eslint-disable react/prop-types */
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useRecoilValue } from "recoil";
+import { useRecoilValue, useSetRecoilState } from "recoil";
 import { userState } from "../state/userAtom";
 import axios from "axios";
 import API_BASE_URL from '../config/api';
@@ -9,6 +9,7 @@ import API_BASE_URL from '../config/api';
 export default function Dashboard() {
     const navigate = useNavigate();
     const user = useRecoilValue(userState);
+    const setUser = useSetRecoilState(userState);
     const [events, setEvents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -69,14 +70,9 @@ export default function Dashboard() {
             setRegistering(true);
             const response = await axios.post(`${API_BASE_URL}/user/register-event/${eventId}`);
 
-            // Update the event in the UI to show registered status
-            setEvents(prevEvents =>
-                prevEvents.map(event =>
-                    event.id === eventId
-                        ? { ...event, attendees: [...(event.attendees || []), { id: userProfile._id }] }
-                        : event
-                )
-            );
+            // ✅ FIXED: Refetch events after registration to ensure consistency
+            const eventsRes = await axios.get(`${API_BASE_URL}/user/events`);
+            setEvents(eventsRes.data.events || []);
 
             setNotification({
                 show: true,
@@ -106,34 +102,39 @@ export default function Dashboard() {
     };
 
     const handleLogout = () => {
+        // ✅ FIXED: Clear all auth-related data
         localStorage.removeItem('token');
+        delete axios.defaults.headers.common['Authorization'];
+        
+        // Clear Recoil state
+        setUser(null);
+        
+        // Clear component state
+        setEvents([]);
+        setUserProfile(null);
+        
         navigate('/');
     };
 
-    // ✅ FIXED: Helper function to check if an event is registered
+    // ✅ FIXED: Simplified registration check
     const isEventRegistered = (event) => {
         if (!userProfile || !userProfile._id) return false;
-
-        // Check if attendees array exists
         if (!Array.isArray(event.attendees)) return false;
 
-        // Log for debugging
-        console.log('Checking registration for event:', event.title);
-        console.log('User ID:', userProfile._id);
-        console.log('Attendees:', event.attendees);
-
-        // The backend returns attendees as an array of objects with 'id' property
-        // Check both id and _id to be safe
+        const userId = userProfile._id.toString();
+        
         return event.attendees.some(attendee => {
-            // Handle different formats: ObjectId string, {id: ...}, {_id: ...}
+            // Handle string IDs
             if (typeof attendee === 'string') {
-                return attendee === userProfile._id || attendee === userProfile.id;
+                return attendee.toString() === userId;
             }
-            if (typeof attendee === 'object') {
-                return attendee.id === userProfile._id || 
-                       attendee.id === userProfile.id ||
-                       attendee._id === userProfile._id ||
-                       attendee._id === userProfile.id;
+            // Handle object with id property (from backend)
+            if (attendee && attendee.id) {
+                return attendee.id.toString() === userId;
+            }
+            // Handle object with _id property
+            if (attendee && attendee._id) {
+                return attendee._id.toString() === userId;
             }
             return false;
         });
@@ -158,11 +159,6 @@ export default function Dashboard() {
     // Apply search filter
     const registeredEvents = filterEvents(allRegisteredEvents);
     const unregisteredEvents = filterEvents(allUnregisteredEvents);
-
-    // Debug logs
-    console.log('Total events:', events.length);
-    console.log('Registered events:', allRegisteredEvents.length);
-    console.log('Unregistered events:', allUnregisteredEvents.length);
 
     if (loading) {
         return (

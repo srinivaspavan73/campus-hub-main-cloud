@@ -52,38 +52,42 @@ export default function SignIn() {
         }
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setError(null);
+// In Signin.jsx, modify the handleSubmit function:
+const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError(null);
 
-        const validation = validateEmail(email);
-        if (!validation.valid) {
-            setEmailError(validation.message);
-            return;
-        }
+    const validation = validateEmail(email);
+    if (!validation.valid) {
+        setEmailError(validation.message);
+        return;
+    }
 
-        setIsLoading(true);
+    setIsLoading(true);
 
-        try {
-            const normalizedEmail = validation.normalizedEmail;
+    try {
+        const normalizedEmail = validation.normalizedEmail;
 
-            const response = await axios.post(`${API_BASE_URL}/user/signin`, {
-                email: normalizedEmail,
-                password
-            });
+        // ✅ Clear any existing data before signin
+        localStorage.removeItem('token');
+        delete axios.defaults.headers.common['Authorization'];
 
-            const { token, user } = response.data;
+        const response = await axios.post(`${API_BASE_URL}/user/signin`, {
+            email: normalizedEmail,
+            password
+        });
 
-            localStorage.setItem('token', token);
+        const { token, user } = response.data;
 
-            setUser(user);
-            navigate('/dashboard');
-        } catch (err) {
-            setError(err.response?.data?.msg || 'Something went wrong. Please try again.');
-        } finally {
-            setIsLoading(false);
-        }
-    };
+        localStorage.setItem('token', token);
+        setUser(user);
+        navigate('/dashboard');
+    } catch (err) {
+        setError(err.response?.data?.msg || 'Something went wrong. Please try again.');
+    } finally {
+        setIsLoading(false);
+    }
+};
 
     const togglePasswordVisibility = () => {
         setShowPassword(!showPassword);
