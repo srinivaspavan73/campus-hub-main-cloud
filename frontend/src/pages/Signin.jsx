@@ -33,8 +33,8 @@ export default function SignIn() {
         }
 
         const username = trimmedEmail.split('@')[0];
-        if (!username.startsWith('21JR1A')) {
-            return { valid: false, message: 'Email must start with "21JR1A" your student mail/roll no' };
+        if (!username.startsWith('21jr1a')) {
+            return { valid: false, message: 'Email must start with "21jr1a" your student mail/roll no' };
         }
 
         return { valid: true, normalizedEmail: trimmedEmail };
@@ -111,13 +111,13 @@ export default function SignIn() {
                             className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200 bg-gray-50 hover:bg-white ${emailError ? 'border-red-500' : 'border-gray-300'}`}
                             value={email}
                             onChange={handleEmailChange}
-                            placeholder="21JR1A4441@gmail.com"
+                            placeholder="21jr1a4441@gmail.com"
                             required
                         />
                         {emailError && (
                             <p className="text-red-500 text-xs mt-1">{emailError}</p>
                         )}
-                        <p className="text-gray-500 text-xs mt-1">Email must start with "21JR1A" your student mail/roll no</p>
+                        <p className="text-gray-500 text-xs mt-1">Email must start with "21jr1a" your student mail/roll no</p>
                     </div>
                     <div>
                         <div className="flex justify-between items-center mb-1">

@@ -63,8 +63,8 @@ export default function CustomSignup() {
         }
 
         const username = trimmedEmail.split('@')[0];
-        if (!username.startsWith('21JR1A')) {
-            return { valid: false, message: 'Email must start with "21JR1A" your student mail/roll no' };
+        if (!username.startsWith('21jr1a')) {
+            return { valid: false, message: 'Email must start with "21jr1a" your student mail/roll no' };
         }
 
         return { valid: true, normalizedEmail: trimmedEmail };
@@ -221,10 +221,10 @@ export default function CustomSignup() {
                                 className={`appearance-none block w-full px-3 py-2 border ${
                                     errors.email ? "border-red-300" : "border-gray-300"
                                 } rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
-                                placeholder="21JR1A4441@gmail.com"
+                                placeholder="21jr1a4441@gmail.com"
                             />
                             {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
-                            <p className="mt-1 text-xs text-gray-500">Email must start with "21JR1A" and end with "@gmail.com"</p>
+                            <p className="mt-1 text-xs text-gray-500">Email must start with "21jr1a" and end with "@gmail.com"</p>
                         </div>
 
                         <div>
