@@ -14,7 +14,7 @@ export default function Dashboard() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [userProfile, setUserProfile] = useState(null);
-    const [registeringEvents, setRegisteringEvents] = useState(new Set()); // ✅ Track multiple events
+    const [registering, setRegistering] = useState(false);
     const [notification, setNotification] = useState({ show: false, message: "", type: "" });
     const [searchQuery, setSearchQuery] = useState("");
 
