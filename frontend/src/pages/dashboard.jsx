@@ -14,7 +14,7 @@ export default function Dashboard() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [userProfile, setUserProfile] = useState(null);
-    const [registering, setRegistering] = useState(false);
+    const [registeringEvents, setRegisteringEvents] = useState(new Set()); // ✅ Track multiple events
     const [notification, setNotification] = useState({ show: false, message: "", type: "" });
     const [searchQuery, setSearchQuery] = useState("");
 
@@ -66,8 +66,15 @@ export default function Dashboard() {
     };
 
     const handleRegisterForEvent = async (eventId) => {
+        // ✅ Prevent multiple clicks on the same event
+        if (registeringEvents.has(eventId)) {
+            return;
+        }
+
         try {
-            setRegistering(true);
+            // ✅ Add this event to the registering set
+            setRegisteringEvents(prev => new Set([...prev, eventId]));
+
             const response = await axios.post(`${API_BASE_URL}/user/register-event/${eventId}`);
 
             // ✅ FIXED: Refetch events after registration to ensure consistency
@@ -97,7 +104,12 @@ export default function Dashboard() {
                 setNotification({ show: false, message: "", type: "" });
             }, 3000);
         } finally {
-            setRegistering(false);
+            // ✅ Remove this event from the registering set
+            setRegisteringEvents(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(eventId);
+                return newSet;
+            });
         }
     };
 
@@ -242,10 +254,10 @@ export default function Dashboard() {
                     ) : (
                         <button
                             onClick={() => handleRegisterForEvent(event.id)}
-                            disabled={registering}
-                            className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:bg-blue-300"
+                            disabled={registeringEvents.has(event.id)}
+                            className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:bg-blue-300 disabled:cursor-not-allowed"
                         >
-                            {registering ? "Registering..." : "Register Now"}
+                            {registeringEvents.has(event.id) ? "Registering..." : "Register Now"}
                         </button>
                     )}
                 </div>
