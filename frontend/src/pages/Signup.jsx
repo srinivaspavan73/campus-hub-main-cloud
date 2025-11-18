@@ -64,7 +64,7 @@ export default function CustomSignup() {
 
         const username = trimmedEmail.split('@')[0];
         if (!username.startsWith('21JR1A')) {
-            return { valid: false, message: 'Email must start with "21JR1A"' };
+            return { valid: false, message: 'Email must start with "21JR1A" your student mail/roll no' };
         }
 
         return { valid: true, normalizedEmail: trimmedEmail };

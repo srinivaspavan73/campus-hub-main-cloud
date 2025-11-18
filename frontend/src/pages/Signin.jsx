@@ -34,7 +34,7 @@ export default function SignIn() {
 
         const username = trimmedEmail.split('@')[0];
         if (!username.startsWith('21JR1A')) {
-            return { valid: false, message: 'Email must start with "21JR1A"' };
+            return { valid: false, message: 'Email must start with "21JR1A" your student mail/roll no' };
         }
 
         return { valid: true, normalizedEmail: trimmedEmail };
@@ -117,7 +117,7 @@ export default function SignIn() {
                         {emailError && (
                             <p className="text-red-500 text-xs mt-1">{emailError}</p>
                         )}
-                        <p className="text-gray-500 text-xs mt-1">Email must start with "21JR1A" and end with "@gmail.com"</p>
+                        <p className="text-gray-500 text-xs mt-1">Email must start with "21JR1A" your student mail/roll no</p>
                     </div>
                     <div>
                         <div className="flex justify-between items-center mb-1">
