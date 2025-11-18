@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const { z } = require('zod');
 const nodemailer = require('nodemailer');
 const dotenv = require('dotenv');
+const mongoose = require('mongoose');
 
 const { User, Event, Registration, Admin } = require('./db/db');
 
@@ -14,14 +15,13 @@ const app = express();
 
 // ✅ CRITICAL: Apply CORS BEFORE any other middleware
 const allowedOrigins = [
-    'https://campus-hub-main-cloud.vercel.app', // ✅ NO trailing slash
+    'https://campus-hub-main-cloud.vercel.app',
     'http://localhost:5173',
     'http://localhost:3000'
 ];
 
 app.use(cors({
     origin: function (origin, callback) {
-        // Allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return callback(null, true);
         
         if (allowedOrigins.indexOf(origin) !== -1) {
@@ -35,10 +35,9 @@ app.use(cors({
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     exposedHeaders: ['Content-Length', 'X-Request-Id'],
-    maxAge: 86400 // 24 hours
+    maxAge: 86400
 }));
 
-// Handle preflight requests explicitly
 app.options('*', cors());
 
 app.use(express.json());
@@ -93,7 +92,7 @@ const emailConfig = {
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
                 <h1 style="color: #4a6ee0; text-align: center;">Welcome to CampusHub! 🚀</h1>
                 <p style="font-size: 16px; line-height: 1.5;">Hey <strong>${username}</strong>! 👋</p>
-                <p style="font-size: 16px; line-height: 1.5;">Welcome to <strong>CampusHub</strong> — your one-stop destination for campus events! 🎓🎉</p>
+                <p style="font-size: 16px; line-height: 1.5;">Welcome to <strong>CampusHub</strong> – your one-stop destination for campus events! 🎓🎉</p>
                 <p style="font-size: 16px; line-height: 1.5;">Explore exciting meetups, workshops, and activities happening around you. Never miss an event again! 🔥</p>
                 <div style="text-align: center; margin: 30px 0;">
                     <a href="https://campus-hub-main-cloud.vercel.app/" style="background-color: #4a6ee0; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Visit CampusHub</a>
@@ -237,7 +236,6 @@ const userRoutes = {
                 process.env.JWT_SECRET,
             );
 
-            // Send welcome email asynchronously without blocking the response
             emailConfig.sendWelcomeEmail(newUser).catch(err => {
                 console.error('Failed to send welcome email:', err);
             });
@@ -502,26 +500,82 @@ const adminRoutes = {
         }
     },
 
+    // ✅ FIXED: Event registrations endpoint with better error handling
     async getEventRegistrations(req, res) {
         try {
-            const registrations = await Registration.find({ eventId: req.params.eventId })
-                .populate('userId', 'username email');
+            const eventId = req.params.eventId;
+            
+            console.log('Fetching registrations for event:', eventId);
 
-            const formattedRegistrations = registrations.map(reg => ({
-                id: reg._id,
-                userId: reg.userId._id,
-                eventId: reg.eventId,
-                registeredAt: reg.registeredAt,
-                user: {
-                    username: reg.userId.username,
-                    email: reg.userId.email
+            // Validate ObjectId format
+            if (!mongoose.Types.ObjectId.isValid(eventId)) {
+                console.log('Invalid eventId format:', eventId);
+                return res.status(400).json({ success: false, msg: 'Invalid event ID format' });
+            }
+
+            // First check if event exists
+            const event = await Event.findById(eventId);
+            if (!event) {
+                console.log('Event not found:', eventId);
+                return res.status(404).json({ success: false, msg: 'Event not found' });
+            }
+
+            console.log('Event found:', event.title);
+
+            // Fetch registrations with populated user data
+            const registrations = await Registration.find({ eventId: eventId })
+                .populate('userId', 'username email')
+                .sort({ registeredAt: -1 }); // Sort by most recent first
+
+            console.log(`Found ${registrations.length} registrations`);
+
+            // Format the response
+            const formattedRegistrations = registrations.map(reg => {
+                // Handle case where user might have been deleted
+                if (!reg.userId) {
+                    console.warn('Registration found with deleted user:', reg._id);
+                    return {
+                        id: reg._id,
+                        userId: null,
+                        eventId: reg.eventId,
+                        registeredAt: reg.registeredAt,
+                        user: {
+                            username: 'Deleted User',
+                            email: 'N/A'
+                        }
+                    };
                 }
-            }));
 
-            res.json({ success: true, registrations: formattedRegistrations });
+                return {
+                    id: reg._id,
+                    userId: reg.userId._id,
+                    eventId: reg.eventId,
+                    registeredAt: reg.registeredAt,
+                    user: {
+                        username: reg.userId.username,
+                        email: reg.userId.email
+                    }
+                };
+            });
+
+            console.log('Sending response with', formattedRegistrations.length, 'registrations');
+
+            res.json({ 
+                success: true, 
+                registrations: formattedRegistrations,
+                count: formattedRegistrations.length
+            });
         } catch (error) {
             console.error('Get registrations error:', error);
-            res.status(500).json({ success: false, msg: 'Server error' });
+            console.error('Error name:', error.name);
+            console.error('Error message:', error.message);
+            console.error('Error stack:', error.stack);
+            res.status(500).json({ 
+                success: false, 
+                msg: 'Server error while fetching registrations',
+                error: error.message,
+                errorName: error.name
+            });
         }
     }
 };
@@ -536,7 +590,8 @@ app.get('/admin/profile', authenticateToken, adminRoutes.getProfile);
 app.get('/admin/events', authenticateToken, isAdmin, async (req, res) => {
     try {
         const events = await Event.find()
-            .populate('attendees', 'id username email');
+            .populate('attendees', 'id username email')
+            .sort({ date: -1 }); // Sort by date descending
 
         const formattedEvents = events.map(event => ({
             id: event._id,
@@ -575,7 +630,8 @@ app.get('/user/profile', authenticateToken, userRoutes.getProfile);
 app.get('/user/events', async (req, res) => {
     try {
         const events = await Event.find()
-            .populate('attendees', 'id username email');
+            .populate('attendees', 'id username email')
+            .sort({ date: 1 }); // Sort by date ascending for users
 
         const formattedEvents = events.map(event => ({
             id: event._id,
@@ -628,6 +684,39 @@ app.get('/users', async (req, res) => {
         });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// ✅ NEW: Test endpoint for debugging registrations
+app.get('/test-registrations/:eventId', async (req, res) => {
+    try {
+        const eventId = req.params.eventId;
+        
+        // Check if event exists
+        const event = await Event.findById(eventId);
+        
+        // Get all registrations for this event
+        const registrations = await Registration.find({ eventId: eventId });
+        
+        // Get registration count from event.attendees
+        const eventWithAttendees = await Event.findById(eventId).populate('attendees');
+        
+        res.json({
+            success: true,
+            eventId: eventId,
+            eventExists: !!event,
+            eventTitle: event?.title,
+            registrationsInDB: registrations.length,
+            attendeesInEvent: eventWithAttendees?.attendees?.length || 0,
+            registrations: registrations,
+            attendees: eventWithAttendees?.attendees
+        });
+    } catch (error) {
+        res.status(500).json({ 
+            success: false, 
+            message: error.message,
+            stack: error.stack 
+        });
     }
 });
 
