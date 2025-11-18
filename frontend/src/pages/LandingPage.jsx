@@ -137,7 +137,7 @@ export default function LandingPage() {
       </section>
 
       {/* Preview Section */}
-      <motion.section
+      {/* <motion.section
         className="py-16 bg-white"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -174,7 +174,7 @@ export default function LandingPage() {
             </div>
           </div>
         </div>
-      </motion.section>
+      </motion.section> */}
 
       {/* Features Section */}
       <section id="features" className="py-20 bg-gray-50">
